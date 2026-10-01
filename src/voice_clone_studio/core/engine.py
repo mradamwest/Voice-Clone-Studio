@@ -28,8 +28,8 @@ class VoiceEngine:
         if self._model is None:
             if not self.available:
                 raise RuntimeError("Chatterbox engine is not installed.")
-            from chatterbox.tts import ChatterboxTTS
-            self._model = ChatterboxTTS.from_pretrained(device=self._best_device())
+            from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+            self._model = ChatterboxMultilingualTTS.from_pretrained(device=self._best_device(), t3_model="v3")
         return self._model
 
     def generate(self, text: str, reference_audio: str, output: str) -> Path:
