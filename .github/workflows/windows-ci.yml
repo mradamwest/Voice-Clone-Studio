@@ -35,6 +35,13 @@ jobs:
         run: |
           $p = Start-Process ".\dist\Voice Clone Studio\Voice Clone Studio.exe" -ArgumentList "--app-import-self-test" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Packaged startup self-test failed with exit code $($p.ExitCode)" }
+      - name: Build Windows installer
+        shell: powershell
+        run: |
+          .\build_windows.ps1
+          if (!(Test-Path "dist-installer\Voice_Clone_Studio_Setup_0.1.0.exe")) { throw "Installer missing" }
+          $size = (Get-Item "dist-installer\Voice_Clone_Studio_Setup_0.1.0.exe").Length
+          if ($size -lt 1000000) { throw "Installer is unexpectedly small" }
       - name: Verify installer contract
         shell: powershell
         run: |
@@ -42,3 +49,9 @@ jobs:
           if ($iss -notmatch "\{autodesktop\}") { throw "Desktop shortcut missing from installer" }
           if ($iss -notmatch "Uninstallable=yes") { throw "Uninstaller is not enabled" }
           if ($iss -notmatch "CreateUninstallRegKey=yes") { throw "Windows uninstall registration missing" }
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Voice-Clone-Studio-Windows
+          path: dist-installer/Voice_Clone_Studio_Setup_0.1.0.exe
+          if-no-files-found: error
