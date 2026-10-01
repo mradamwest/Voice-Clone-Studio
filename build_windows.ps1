@@ -10,7 +10,7 @@ $inno = Join-Path $innoRoot "ISCC.exe"
 if (!(Test-Path $inno)) {
     New-Item -ItemType Directory -Force -Path $innoRoot | Out-Null
     if (!(Test-Path $innoInstaller)) {
-        Invoke-WebRequest "https://files.jrsoftware.org/is/6/innosetup-6.7.3.exe" -OutFile $innoInstaller
+        Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" -OutFile $innoInstaller
     }
     & $innoInstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /DIR="$innoRoot"
     if ($LASTEXITCODE -ne 0) { throw "Local Inno Setup extraction failed with exit code $LASTEXITCODE" }
