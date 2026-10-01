@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QSlider, QTextEdit, QVBoxLayout, QWidget
+    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox
 )
 
 class MainWindow(QMainWindow):
@@ -11,6 +11,7 @@ class MainWindow(QMainWindow):
         self.resize(1440, 900)
         self.setMinimumSize(1100, 700)
         self.setStyleSheet(self._style())
+        self.reference_audio = ""
         self.setCentralWidget(self._build())
 
     def _build(self):
@@ -50,12 +51,14 @@ class MainWindow(QMainWindow):
         c = QVBoxLayout(card)
         c.setContentsMargins(28, 24, 28, 24)
         c.addWidget(QLabel("SELECT VOICE"))
-        voice = QPushButton("My Voice     •     Ready")
+        voice = QPushButton("Choose Reference Voice…")
         voice.setObjectName("voice")
+        voice.clicked.connect(lambda: self._choose_reference(voice))
         c.addWidget(voice)
         c.addSpacing(16)
         c.addWidget(QLabel("TEXT TO SPEECH"))
         editor = QTextEdit()
+        self.editor = editor
         editor.setPlaceholderText("Type or paste the text you want to generate...")
         editor.setMinimumHeight(190)
         c.addWidget(editor)
@@ -73,6 +76,7 @@ class MainWindow(QMainWindow):
         preview = QPushButton("Preview")
         generate = QPushButton("Generate Speech")
         generate.setObjectName("primary")
+        generate.clicked.connect(self._validate_generation)
         actions.addStretch()
         actions.addWidget(preview)
         actions.addWidget(generate)
@@ -81,6 +85,21 @@ class MainWindow(QMainWindow):
         body.addStretch()
         layout.addWidget(content, 1)
         return root
+
+    def _choose_reference(self, button):
+        path, _ = QFileDialog.getOpenFileName(self, "Choose Reference Voice", "", "Audio (*.wav *.mp3 *.flac *.m4a)")
+        if path:
+            self.reference_audio = path
+            button.setText("Reference Voice     •     Ready")
+
+    def _validate_generation(self):
+        if not self.reference_audio:
+            QMessageBox.information(self, "Reference Voice", "Choose a reference voice recording first.")
+            return
+        if not self.editor.toPlainText().strip():
+            QMessageBox.information(self, "Text Required", "Enter text to generate.")
+            return
+        QMessageBox.information(self, "Voice Clone Studio", "Voice engine connection is ready for the next milestone.")
 
     @staticmethod
     def _style():
