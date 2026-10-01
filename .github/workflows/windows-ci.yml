@@ -30,7 +30,7 @@ jobs:
         shell: powershell
         run: |
           if (!(Test-Path "dist\Voice Clone Studio\Voice Clone Studio.exe")) { throw "Packaged executable missing" }
-      - name: Verify installer contract
+      - name: Run packaged startup self-test\n        shell: powershell\n        run: |\n          $p = Start-Process ".\\dist\\Voice Clone Studio\\Voice Clone Studio.exe" -ArgumentList "--app-import-self-test" -Wait -PassThru\n          if ($p.ExitCode -ne 0) { throw "Packaged startup self-test failed with exit code $($p.ExitCode)" }\n      - name: Verify installer contract
         shell: powershell
         run: |
           $iss = Get-Content "installer\VoiceCloneStudio.iss" -Raw
