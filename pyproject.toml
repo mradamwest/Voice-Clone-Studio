@@ -9,6 +9,7 @@ description = "Modern local-first Windows voice cloning studio"
 requires-python = ">=3.11,<3.12"
 dependencies = [
   "PySide6>=6.8,<6.9",
+  "chatterbox-tts",
 ]
 
 [project.optional-dependencies]
