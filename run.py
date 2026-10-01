@@ -8,8 +8,23 @@ def _self_test() -> int:
     assert VoiceLibrary
     return 0
 
+def _engine_self_test() -> int:
+    # Import the exact modules needed by Generate Speech from the packaged EXE.
+    # This catches the failure that a source-environment import test cannot.
+    import torch
+    import torchaudio
+    import chatterbox
+    from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+    assert torch
+    assert torchaudio
+    assert chatterbox
+    assert ChatterboxMultilingualTTS
+    return 0
+
 if __name__ == "__main__":
     if "--app-import-self-test" in sys.argv:
         raise SystemExit(_self_test())
+    if "--engine-import-self-test" in sys.argv:
+        raise SystemExit(_engine_self_test())
     from voice_clone_studio.app import main
     raise SystemExit(main())
