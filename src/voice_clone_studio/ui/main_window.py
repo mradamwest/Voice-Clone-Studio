@@ -1,8 +1,31 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QThread, Signal
+from pathlib import Path
+import tempfile
+
+from voice_clone_studio.core.engine import VoiceEngine
+
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
     QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox
 )
+
+class GenerateWorker(QThread):
+    finished_audio = Signal(str)
+    failed = Signal(str)
+
+    def __init__(self, text, reference_audio, output):
+        super().__init__()
+        self.text = text
+        self.reference_audio = reference_audio
+        self.output = output
+
+    def run(self):
+        try:
+            path = VoiceEngine().generate(self.text, self.reference_audio, self.output)
+            self.finished_audio.emit(str(path))
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -12,6 +35,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1100, 700)
         self.setStyleSheet(self._style())
         self.reference_audio = ""
+        self.worker = None
+        self.generated_audio = ""
         self.setCentralWidget(self._build())
 
     def _build(self):
@@ -76,7 +101,8 @@ class MainWindow(QMainWindow):
         preview = QPushButton("Preview")
         generate = QPushButton("Generate Speech")
         generate.setObjectName("primary")
-        generate.clicked.connect(self._validate_generation)
+        self.generate_button = generate
+        generate.clicked.connect(self._generate_speech)
         actions.addStretch()
         actions.addWidget(preview)
         actions.addWidget(generate)
@@ -92,14 +118,32 @@ class MainWindow(QMainWindow):
             self.reference_audio = path
             button.setText("Reference Voice     •     Ready")
 
-    def _validate_generation(self):
+    def _generate_speech(self):
         if not self.reference_audio:
             QMessageBox.information(self, "Reference Voice", "Choose a reference voice recording first.")
             return
-        if not self.editor.toPlainText().strip():
+        text = self.editor.toPlainText().strip()
+        if not text:
             QMessageBox.information(self, "Text Required", "Enter text to generate.")
             return
-        QMessageBox.information(self, "Voice Clone Studio", "Voice engine connection is ready for the next milestone.")
+        output = str(Path(tempfile.gettempdir()) / "voice-clone-studio-output.wav")
+        self.generate_button.setEnabled(False)
+        self.generate_button.setText("Generating…")
+        self.worker = GenerateWorker(text, self.reference_audio, output)
+        self.worker.finished_audio.connect(self._generation_finished)
+        self.worker.failed.connect(self._generation_failed)
+        self.worker.start()
+
+    def _generation_finished(self, path):
+        self.generated_audio = path
+        self.generate_button.setEnabled(True)
+        self.generate_button.setText("Generate Speech")
+        QMessageBox.information(self, "Voice Clone Studio", f"Speech generated successfully.\n\n{path}")
+
+    def _generation_failed(self, message):
+        self.generate_button.setEnabled(True)
+        self.generate_button.setText("Generate Speech")
+        QMessageBox.critical(self, "Generation Failed", message)
 
     @staticmethod
     def _style():
