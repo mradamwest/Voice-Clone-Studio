@@ -33,3 +33,12 @@ def test_empty_reference_is_rejected_before_model_load(tmp_path):
         assert "empty" in str(exc).lower()
     else:
         raise AssertionError("empty reference audio must be rejected")
+
+
+def test_invalid_device_is_rejected():
+    try:
+        VoiceEngine("metal")._best_device()
+    except ValueError as exc:
+        assert "Unsupported device" in str(exc)
+    else:
+        raise AssertionError("invalid device must be rejected")
