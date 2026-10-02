@@ -117,3 +117,21 @@ def reference_audio_status(reference_audio: str) -> dict[str, object]:
     exists = path.is_file()
     size = path.stat().st_size if exists else 0
     return {"path": str(path), "exists": exists, "supported": supported, "bytes": size, "ready": exists and supported and size > 0}
+
+
+def generation_output_path(root: str | Path, filename: str = "voice-clone.wav") -> Path:
+    """Create a safe deterministic WAV destination without touching an existing file."""
+    directory = Path(root).expanduser().resolve()
+    name = Path(filename).name
+    if not name.lower().endswith(".wav"):
+        raise ValueError("Generated voice filename must use .wav.")
+    candidate = directory / name
+    if not candidate.exists():
+        return candidate
+    stem = candidate.stem
+    index = 2
+    while True:
+        alternative = directory / f"{stem}_{index}.wav"
+        if not alternative.exists():
+            return alternative
+        index += 1
