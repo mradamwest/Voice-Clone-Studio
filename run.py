@@ -1,3 +1,4 @@
+import os
 import sys
 
 def _self_test() -> int:
@@ -19,7 +20,10 @@ def _engine_self_test() -> int:
     assert torchaudio
     assert chatterbox
     assert ChatterboxMultilingualTTS
-    return 0
+    # Torch/audio native runtimes can keep non-Python worker state alive after
+    # successful imports. This is a packaging probe, so exit immediately once
+    # all required engine modules have loaded.
+    os._exit(0)
 
 if __name__ == "__main__":
     if "--app-import-self-test" in sys.argv:
