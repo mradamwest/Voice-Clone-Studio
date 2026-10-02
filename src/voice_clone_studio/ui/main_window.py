@@ -126,6 +126,7 @@ class MainWindow(QMainWindow):
         voice.clicked.connect(lambda: self._choose_reference(voice))
         c.addWidget(voice)
         self.setAcceptDrops(True)
+        self.reference_button.setProperty("dropActive", False)
         c.addSpacing(16)
         c.addWidget(QLabel("TEXT TO SPEECH"))
         editor = QTextEdit()
@@ -411,21 +412,44 @@ class MainWindow(QMainWindow):
         self.reference_button.setText(f"Saved Voice     •     {profile.name}")
         self.my_voice_source.setChecked(True)
 
+    def _set_reference_drop_highlight(self, active):
+        self.reference_button.setProperty("dropActive", bool(active))
+        self.reference_button.style().unpolish(self.reference_button)
+        self.reference_button.style().polish(self.reference_button)
+
     def dragEnterEvent(self, event):
         urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
-        if len(urls) == 1 and Path(urls[0].toLocalFile()).suffix.lower() in {".wav", ".mp3", ".flac", ".m4a"}:
+        valid = (
+            len(urls) == 1
+            and urls[0].isLocalFile()
+            and Path(urls[0].toLocalFile()).suffix.lower() in {".wav", ".mp3", ".flac", ".m4a"}
+        )
+        self._set_reference_drop_highlight(valid)
+        if valid:
             event.acceptProposedAction()
         else:
             event.ignore()
 
+    def dragLeaveEvent(self, event):
+        self._set_reference_drop_highlight(False)
+        event.accept()
+
     def dropEvent(self, event):
+        self._set_reference_drop_highlight(False)
         urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
-        if len(urls) != 1:
+        if len(urls) != 1 or not urls[0].isLocalFile():
+            QMessageBox.warning(self, "Reference Voice", "Drop one local WAV, MP3, FLAC, or M4A recording.")
+            event.ignore()
             return
         path = urls[0].toLocalFile()
+        if Path(path).suffix.lower() not in {".wav", ".mp3", ".flac", ".m4a"}:
+            QMessageBox.warning(self, "Reference Voice", "Unsupported file type. Use WAV, MP3, FLAC, or M4A.")
+            event.ignore()
+            return
         status = reference_audio_status(path)
         if not status["ready"]:
-            QMessageBox.warning(self, "Reference Voice", "The dropped recording is not ready for cloning.")
+            QMessageBox.warning(self, "Reference Voice", "The dropped recording is missing or empty.")
+            event.ignore()
             return
         self.reference_audio = path
         self.active_voice_name = Path(path).stem
@@ -561,7 +585,7 @@ class MainWindow(QMainWindow):
         #title { font-size:32px; font-weight:700; }
         #muted { color:#858da4; font-size:15px; }
         #card { background:#0e1425; border:1px solid #202b48; border-radius:14px; }
-        #voice, QTextEdit { background:#11192d; border:1px solid #293656; border-radius:9px; padding:13px; color:white; }
+        #voice, QTextEdit { background:#11192d; border:1px solid #293656; border-radius:9px; padding:13px; color:white; }\n        #voice[dropActive="true"] { border:2px solid #8a68ff; background:#171f38; }
         QPushButton { background:#151d32; border:1px solid #2a3654; border-radius:8px; padding:10px 18px; color:#e8eaf4; }
         #primary { background:#7047ed; border-color:#825dff; font-weight:700; }
         QSlider::groove:horizontal { height:4px; background:#27304b; border-radius:2px; }
