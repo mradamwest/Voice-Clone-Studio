@@ -172,3 +172,15 @@ def ensure_voice_ready(allow_model_download: bool = False) -> dict[str, object]:
     if status["requires_model_download"] and not allow_model_download:
         raise RuntimeError("Voice model is not cached; model download approval is required.")
     return status
+
+
+def generation_preflight(text: str, reference_audio: str, output: str, allow_model_download: bool = False) -> dict[str, object]:
+    """Single preflight contract for the UI before starting a generation worker."""
+    clean_text, reference, destination = validate_generation_request(text, reference_audio, output)
+    readiness = ensure_voice_ready(allow_model_download=allow_model_download)
+    return {
+        "text": clean_text,
+        "reference_audio": str(reference),
+        "output": str(destination),
+        **readiness,
+    }
