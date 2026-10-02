@@ -33,9 +33,9 @@ class VoiceEngine:
             from voice_clone_studio.core.chatterbox_runtime import load_multilingual_tts_class
             ChatterboxMultilingualTTS = load_multilingual_tts_class()
             try:
-                # Current upstream V3 documentation accepts t3_model="v3".
+                # Use the upstream multilingual V2 checkpoint as the compatibility baseline.\n                # V3 has known regressions in non-English multilingual generation.
                 self._model = ChatterboxMultilingualTTS.from_pretrained(
-                    device=self._best_device(), t3_model="v3"
+                    device=self._best_device(), t3_model="v2"
                 )
             except TypeError as exc:
                 # Some published Chatterbox builds have temporarily shipped
