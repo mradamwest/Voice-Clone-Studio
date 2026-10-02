@@ -49,7 +49,11 @@ class VoiceLibrary:
         clean_name = name.strip()
         if not clean_name:
             raise ValueError("Voice name cannot be empty.")
+        if len(clean_name) > 80:
+            raise ValueError("Voice name cannot exceed 80 characters.")
         ref = Path(reference_audio).expanduser().resolve()
+        if ref.suffix.lower() not in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}:
+            raise ValueError("Unsupported reference audio format.")
         if not ref.is_file():
             raise FileNotFoundError(ref)
         if ref.stat().st_size == 0:
