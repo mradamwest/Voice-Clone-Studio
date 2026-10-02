@@ -89,3 +89,11 @@ class VoiceLibrary:
         updated = VoiceProfile(target.id, clean_name, target.reference_audio, target.language)
         self._save([updated if p.id == profile_id else p for p in profiles])
         return updated
+
+
+    def get(self, profile_id: str) -> VoiceProfile:
+        """Return one saved profile by stable ID."""
+        profile = next((p for p in self.list() if p.id == profile_id), None)
+        if profile is None:
+            raise KeyError(profile_id)
+        return profile
