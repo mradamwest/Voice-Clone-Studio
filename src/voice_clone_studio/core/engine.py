@@ -108,3 +108,12 @@ def model_cache_status() -> dict[str, object]:
     root = root.resolve()
     files = tuple(sorted((p for p in root.glob("*") if p.is_file()), key=lambda p: p.name.casefold())) if root.is_dir() else ()
     return {"directory": str(root), "exists": root.is_dir(), "files": tuple(p.name for p in files), "bytes": sum(p.stat().st_size for p in files)}
+
+
+def reference_audio_status(reference_audio: str) -> dict[str, object]:
+    """Return UI-ready reference-file status without loading the AI model."""
+    path = Path(reference_audio).expanduser().resolve()
+    supported = path.suffix.lower() in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}
+    exists = path.is_file()
+    size = path.stat().st_size if exists else 0
+    return {"path": str(path), "exists": exists, "supported": supported, "bytes": size, "ready": exists and supported and size > 0}
