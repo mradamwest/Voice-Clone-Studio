@@ -3,7 +3,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 import tempfile
 
-from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request, reference_audio_status, generation_output_path, verify_generated_audio
+from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, reference_audio_status, generation_output_path, verify_generated_audio
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
@@ -144,8 +144,8 @@ class MainWindow(QMainWindow):
             return
         output = str(generation_output_path(tempfile.gettempdir(), "voice-clone-studio-output.wav"))
         try:
-            validate_generation_request(text, self.reference_audio, output)
-        except (ValueError, FileNotFoundError) as exc:
+            generation_preflight(text, self.reference_audio, output, allow_model_download=True)
+        except (ValueError, FileNotFoundError, RuntimeError) as exc:
             QMessageBox.warning(self, "Cannot Generate", str(exc))
             return
         self.generated_audio = ""
