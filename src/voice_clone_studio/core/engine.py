@@ -1,4 +1,5 @@
 from pathlib import Path
+import importlib.util
 
 class VoiceEngine:
     """Lazy Chatterbox adapter; model loading never blocks application startup."""
@@ -9,11 +10,10 @@ class VoiceEngine:
 
     @property
     def available(self) -> bool:
-        try:
-            import chatterbox  # noqa: F401
-            return True
-        except ImportError:
-            return False
+        # Do not import chatterbox here. Its package initializer eagerly imports
+        # optional engines and can stall a frozen Windows process. Presence of
+        # the exact module we use is enough for this lightweight readiness check.
+        return importlib.util.find_spec("chatterbox.mtl_tts") is not None
 
     def _best_device(self) -> str:
         if self.device:
@@ -27,7 +27,7 @@ class VoiceEngine:
     def _load(self):
         if self._model is None:
             if not self.available:
-                raise RuntimeError("Chatterbox engine is not installed.")
+                raise RuntimeError("Chatterbox multilingual engine is not installed.")
             from chatterbox.mtl_tts import ChatterboxMultilingualTTS
             self._model = ChatterboxMultilingualTTS.from_pretrained(device=self._best_device(), t3_model="v3")
         return self._model
