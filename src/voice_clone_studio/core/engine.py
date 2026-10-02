@@ -62,6 +62,8 @@ class VoiceEngine:
             raise RuntimeError("Voice engine returned no audio.")
         import torchaudio
         out = Path(output).expanduser().resolve()
+        if out == reference:
+            raise ValueError("Output file cannot overwrite the reference audio.")
         if out.suffix.lower() != ".wav":
             raise ValueError("Voice output must be a WAV file.")
         out.parent.mkdir(parents=True, exist_ok=True)
