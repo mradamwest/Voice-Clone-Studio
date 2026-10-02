@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request, model_cache_status, reference_audio_status
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -167,3 +167,8 @@ def test_reference_audio_status_reports_readiness(tmp_path):
     status = reference_audio_status(str(ref))
     assert status["ready"] is True
     assert status["bytes"] == 5
+
+
+def test_generation_output_path_never_overwrites(tmp_path):
+    first = tmp_path / "voice-clone.wav"; first.write_bytes(b"existing")
+    assert generation_output_path(tmp_path) == tmp_path / "voice-clone_2.wav"
