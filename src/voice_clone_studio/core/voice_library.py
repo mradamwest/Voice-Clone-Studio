@@ -74,12 +74,19 @@ class VoiceLibrary:
 
 
     def remove(self, profile_id: str) -> bool:
-        """Remove a saved profile record without deleting the user's source audio."""
+        """Remove a saved profile and only its app-owned reference copy."""
         profiles = self.list()
-        remaining = [profile for profile in profiles if profile.id != profile_id]
-        if len(remaining) == len(profiles):
+        target = next((profile for profile in profiles if profile.id == profile_id), None)
+        if target is None:
             return False
-        self._save(remaining)
+        self._save([profile for profile in profiles if profile.id != profile_id])
+        reference = Path(target.reference_audio).expanduser()
+        try:
+            owned_reference = reference.resolve().is_relative_to(self.references.resolve())
+        except (OSError, RuntimeError):
+            owned_reference = False
+        if owned_reference and reference.is_file():
+            reference.unlink()
         return True
 
 
