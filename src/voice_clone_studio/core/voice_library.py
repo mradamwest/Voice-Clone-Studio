@@ -28,6 +28,8 @@ class VoiceLibrary:
             return []
         try:
             data = json.loads(self.index.read_text(encoding="utf-8"))
+            if not isinstance(data, list):
+                return []
             return [VoiceProfile(**v) for v in data]
         except (json.JSONDecodeError, TypeError, KeyError):
             return []
