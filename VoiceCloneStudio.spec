@@ -17,7 +17,7 @@ datas.append((str(chatterbox_dir / "mtl_tts.py"), "chatterbox"))
 # Do NOT collect the whole package: that drags optional Turbo/VC dependency
 # graphs into startup and can deadlock a frozen Windows import. Bundle only
 # the multilingual engine modules used by VoiceEngine plus their dependencies.
-for package in ("s3tokenizer", "conformer", "resemble_perth", "perth", "omegaconf", "pyloudnorm", "pykakasi", "spacy_pkuseg"):
+for package in ("s3tokenizer", "conformer", "resemble_perth", "perth", "omegaconf", "pyloudnorm", "pykakasi", "spacy_pkuseg", "requests"):
     try:
         package_datas, package_binaries, package_hiddenimports = collect_all(package)
         datas += package_datas
