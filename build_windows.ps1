@@ -1,7 +1,9 @@
 $ErrorActionPreference = "Stop"
-python -m pip install -e ".[dev]"
-python -m pytest -q
-python -m PyInstaller --noconfirm --clean VoiceCloneStudio.spec
+# CI already installs dependencies, runs tests, and builds the packaged app.
+# Reuse the verified package instead of rebuilding it during installer creation.
+if (!(Test-Path "dist\Voice Clone Studio\Voice Clone Studio.exe")) {
+    python -m PyInstaller --noconfirm --clean VoiceCloneStudio.spec
+}
 if (!(Test-Path "dist\Voice Clone Studio\Voice Clone Studio.exe")) { throw "Packaged executable missing" }
 
 $innoRoot = Join-Path $env:TEMP "voice-clone-studio-inno"
