@@ -162,3 +162,13 @@ def first_run_status() -> dict[str, object]:
         "model_cached": cached,
         "requires_model_download": bool(engine["available"]) and not cached,
     }
+
+
+def ensure_voice_ready(allow_model_download: bool = False) -> dict[str, object]:
+    """Require explicit approval before first-run voice model acquisition."""
+    status = first_run_status()
+    if not status["runtime_available"]:
+        raise RuntimeError("Voice cloning runtime is not available.")
+    if status["requires_model_download"] and not allow_model_download:
+        raise RuntimeError("Voice model is not cached; model download approval is required.")
+    return status
