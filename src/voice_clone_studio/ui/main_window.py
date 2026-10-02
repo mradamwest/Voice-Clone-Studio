@@ -6,7 +6,7 @@ from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, re
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox
+    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar
 )
 
 class GenerateWorker(QThread):
@@ -112,6 +112,18 @@ class MainWindow(QMainWindow):
         controls.addWidget(QSlider(Qt.Horizontal))
         c.addLayout(controls)
 
+        self.generation_progress = QProgressBar()
+        self.generation_progress.setRange(0, 0)
+        self.generation_progress.setTextVisible(False)
+        self.generation_progress.setFixedHeight(6)
+        self.generation_progress.setVisible(False)
+        c.addWidget(self.generation_progress)
+
+        self.generation_status = QLabel("")
+        self.generation_status.setObjectName("muted")
+        self.generation_status.setVisible(False)
+        c.addWidget(self.generation_status)
+
         actions = QHBoxLayout()
         play = QPushButton("Play Generated Audio")
         self.play_button = play
@@ -176,11 +188,15 @@ class MainWindow(QMainWindow):
         self.play_button.setEnabled(False)
         self.generate_button.setEnabled(False)
         self.generate_button.setText("Generating…")
+        self.generation_progress.setVisible(True)
+        self.generation_status.setText("Preparing voice model…")
+        self.generation_status.setVisible(True)
         language_id = self.language_combo.currentText().rsplit("(", 1)[-1].rstrip(")")
         self.worker = GenerateWorker(text, self.reference_audio, output, language_id=language_id, allow_model_download=allow_model_download)
         self.worker.finished_audio.connect(self._generation_finished)
         self.worker.finished.connect(self._generation_worker_finished)
         self.worker.status.connect(self.generate_button.setText)
+        self.worker.status.connect(self.generation_status.setText)
         self.worker.failed.connect(self._generation_failed)
         self.worker.start()
 
@@ -205,6 +221,9 @@ class MainWindow(QMainWindow):
         self.generate_button.setText("Generate Speech")
         self.preview_button.setEnabled(True)
         self.play_button.setEnabled(True)
+        self.generation_progress.setVisible(False)
+        self.generation_status.setText("Speech generated successfully.")
+        self.generation_status.setVisible(True)
         QMessageBox.information(self, "Voice Clone Studio", f"Speech generated successfully.\n\nSaved to:\n{path}")
 
     def _play_generated_audio(self):
@@ -232,6 +251,9 @@ class MainWindow(QMainWindow):
         self.play_button.setEnabled(False)
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate Speech")
+        self.generation_progress.setVisible(False)
+        self.generation_status.setText("Generation failed.")
+        self.generation_status.setVisible(True)
         QMessageBox.critical(self, "Generation Failed", message)
 
     @staticmethod
