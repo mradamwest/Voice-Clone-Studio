@@ -6,6 +6,7 @@ import json
 import os
 import tempfile
 import uuid
+import shutil
 
 @dataclass
 class VoiceProfile:
@@ -22,6 +23,8 @@ class VoiceLibrary:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.index = self.root / "voices.json"
+        self.references = self.root / "My Voices"
+        self.references.mkdir(parents=True, exist_ok=True)
 
     def list(self) -> list[VoiceProfile]:
         if not self.index.exists():
@@ -60,7 +63,10 @@ class VoiceLibrary:
             raise ValueError("Reference audio file is empty.")
         if any(v.name.casefold() == clean_name.casefold() for v in self.list()):
             raise ValueError(f'A voice named "{clean_name}" already exists.')
-        profile = VoiceProfile(str(uuid.uuid4()), clean_name, str(ref), language)
+        profile_id = str(uuid.uuid4())
+        owned_reference = self.references / f"{profile_id}{ref.suffix.lower()}"
+        shutil.copy2(ref, owned_reference)
+        profile = VoiceProfile(profile_id, clean_name, str(owned_reference), language)
         voices = self.list()
         voices.append(profile)
         self._save(voices)
