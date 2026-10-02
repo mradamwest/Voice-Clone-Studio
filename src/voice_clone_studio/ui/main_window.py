@@ -8,7 +8,7 @@ from voice_clone_studio.core.generated_library import GeneratedVoiceLibrary
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar, QButtonGroup, QInputDialog
+    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar, QButtonGroup, QInputDialog, QStackedWidget
 )
 
 class GenerateWorker(QThread):
@@ -66,10 +66,12 @@ class MainWindow(QMainWindow):
         brand = QLabel("◉  VOICE CLONE\n     STUDIO")
         brand.setObjectName("brand")
         side.addWidget(brand)
-        for text in ("My Voices", "Generated Voices"):
-            b = QPushButton(text)
-            b.setObjectName("nav")
-            side.addWidget(b)
+        self.my_voices_nav = QPushButton("My Voices")
+        self.my_voices_nav.setObjectName("nav")
+        self.generated_voices_nav = QPushButton("Generated Voices")
+        self.generated_voices_nav.setObjectName("nav")
+        side.addWidget(self.my_voices_nav)
+        side.addWidget(self.generated_voices_nav)
         side.addStretch()
         side.addWidget(QLabel("Settings"))
         layout.addWidget(sidebar)
@@ -179,8 +181,123 @@ class MainWindow(QMainWindow):
         c.addLayout(actions)
         body.addWidget(card)
         body.addStretch()
-        layout.addWidget(content, 1)
+        self.main_content = content
+        self.generated_content = self._build_generated_voices_page()
+        self.pages = QStackedWidget()
+        self.pages.addWidget(self.main_content)
+        self.pages.addWidget(self.generated_content)
+        self.my_voices_nav.clicked.connect(lambda: self.pages.setCurrentWidget(self.main_content))
+        self.generated_voices_nav.clicked.connect(self._show_generated_voices)
+        layout.addWidget(self.pages, 1)
         return root
+
+    def _build_generated_voices_page(self):
+        page = QWidget()
+        body = QVBoxLayout(page)
+        body.setContentsMargins(42, 34, 42, 34)
+        title = QLabel("Generated Voices")
+        title.setObjectName("title")
+        subtitle = QLabel("Your generated speech is saved here automatically")
+        subtitle.setObjectName("muted")
+        body.addWidget(title); body.addWidget(subtitle); body.addSpacing(22)
+        card = QFrame(); card.setObjectName("card")
+        c = QVBoxLayout(card); c.setContentsMargins(28, 24, 28, 24)
+        self.generated_voice_combo = QComboBox()
+        c.addWidget(self.generated_voice_combo)
+        self.generated_voice_details = QLabel("No generated voices yet.")
+        self.generated_voice_details.setObjectName("muted")
+        c.addWidget(self.generated_voice_details)
+        actions = QHBoxLayout()
+        for label, handler in (
+            ("Play", self._play_library_generated_voice),
+            ("Save / Export…", self._export_library_generated_voice),
+            ("Rename", self._rename_library_generated_voice),
+            ("Delete", self._delete_library_generated_voice),
+        ):
+            button = QPushButton(label); button.clicked.connect(handler); actions.addWidget(button)
+        actions.addStretch(); c.addLayout(actions)
+        self.generated_voice_combo.currentIndexChanged.connect(self._update_generated_voice_details)
+        body.addWidget(card); body.addStretch()
+        return page
+
+    def _refresh_generated_voices(self, selected_id=""):
+        self.generated_voice_combo.blockSignals(True)
+        self.generated_voice_combo.clear()
+        self.generated_voice_combo.addItem("Choose generated audio…", "")
+        selected_index = 0
+        for item in self.generated_library.list():
+            self.generated_voice_combo.addItem(item.name, item.id)
+            if item.id == selected_id:
+                selected_index = self.generated_voice_combo.count() - 1
+        self.generated_voice_combo.setCurrentIndex(selected_index)
+        self.generated_voice_combo.blockSignals(False)
+        self._update_generated_voice_details()
+
+    def _show_generated_voices(self):
+        self._refresh_generated_voices()
+        self.pages.setCurrentWidget(self.generated_content)
+
+    def _selected_generated_voice(self):
+        item_id = self.generated_voice_combo.currentData()
+        if not item_id:
+            return None
+        return next((item for item in self.generated_library.list() if item.id == item_id), None)
+
+    def _update_generated_voice_details(self, *_):
+        item = self._selected_generated_voice()
+        if item is None:
+            self.generated_voice_details.setText("No generated voice selected.")
+            return
+        self.generated_voice_details.setText(
+            f"Voice: {item.voice_name}     •     Language: {item.language}     •     Created: {item.created_at}"
+        )
+
+    def _play_library_generated_voice(self):
+        item = self._selected_generated_voice()
+        if item is None or not Path(item.audio_path).is_file():
+            QMessageBox.information(self, "Generated Voices", "Choose an available generated voice first.")
+            return
+        self.player.setSource(QUrl.fromLocalFile(str(Path(item.audio_path).resolve())))
+        self.player.play()
+
+    def _export_library_generated_voice(self):
+        item = self._selected_generated_voice()
+        if item is None or not Path(item.audio_path).is_file():
+            QMessageBox.information(self, "Generated Voices", "Choose an available generated voice first.")
+            return
+        destination, _ = QFileDialog.getSaveFileName(self, "Save Generated Voice", f"{item.name}.wav", "WAV Audio (*.wav)")
+        if destination:
+            import shutil
+            shutil.copy2(item.audio_path, destination)
+
+    def _rename_library_generated_voice(self):
+        item = self._selected_generated_voice()
+        if item is None:
+            QMessageBox.information(self, "Generated Voices", "Choose a generated voice to rename.")
+            return
+        name, ok = QInputDialog.getText(self, "Rename Generated Voice", "Name:", text=item.name)
+        name = name.strip()
+        if not ok or not name or name == item.name:
+            return
+        try:
+            updated = self.generated_library.rename(item.id, name)
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "Generated Voices", str(exc)); return
+        self._refresh_generated_voices(updated.id)
+
+    def _delete_library_generated_voice(self):
+        item = self._selected_generated_voice()
+        if item is None:
+            QMessageBox.information(self, "Generated Voices", "Choose a generated voice to delete.")
+            return
+        if QMessageBox.question(self, "Delete Generated Voice", f'Delete "{item.name}" from Generated Voices?') != QMessageBox.Yes:
+            return
+        self.generated_library.remove(item.id)
+        if self.generated_audio == item.audio_path:
+            self.generated_audio = ""
+            self.play_button.setEnabled(False)
+            self.preview_button.setEnabled(False)
+        self._refresh_generated_voices()
 
     def _refresh_saved_voices(self, selected_id=""):
         self.saved_voice_combo.blockSignals(True)
