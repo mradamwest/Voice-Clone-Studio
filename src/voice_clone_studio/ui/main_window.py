@@ -6,7 +6,7 @@ from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, re
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar
+    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar, QButtonGroup
 )
 
 class GenerateWorker(QThread):
@@ -61,7 +61,7 @@ class MainWindow(QMainWindow):
         brand = QLabel("◉  VOICE CLONE\n     STUDIO")
         brand.setObjectName("brand")
         side.addWidget(brand)
-        for text in ("Home", "My Voices", "Clone Voice", "Text to Speech", "History"):
+        for text in ("My Voices", "Generated Voices"):
             b = QPushButton(text)
             b.setObjectName("nav")
             side.addWidget(b)
@@ -84,11 +84,23 @@ class MainWindow(QMainWindow):
         card.setObjectName("card")
         c = QVBoxLayout(card)
         c.setContentsMargins(28, 24, 28, 24)
+        c.addWidget(QLabel("VOICE SOURCE"))
+        source_row = QHBoxLayout()
+        self.my_voice_source = QPushButton("My Voice")
+        self.builtin_voice_source = QPushButton("Built-in Voice")
+        self.my_voice_source.setCheckable(True); self.builtin_voice_source.setCheckable(True)
+        self.my_voice_source.setChecked(True)
+        self.voice_source_group = QButtonGroup(self); self.voice_source_group.setExclusive(True)
+        self.voice_source_group.addButton(self.my_voice_source); self.voice_source_group.addButton(self.builtin_voice_source)
+        source_row.addWidget(self.my_voice_source); source_row.addWidget(self.builtin_voice_source); source_row.addStretch()
+        c.addLayout(source_row)
         c.addWidget(QLabel("SELECT VOICE"))
-        voice = QPushButton("Choose Reference Voice…")
+        voice = QPushButton("Choose or Drop Reference Voice…")
         voice.setObjectName("voice")
+        self.reference_button = voice
         voice.clicked.connect(lambda: self._choose_reference(voice))
         c.addWidget(voice)
+        self.setAcceptDrops(True)
         c.addSpacing(16)
         c.addWidget(QLabel("TEXT TO SPEECH"))
         editor = QTextEdit()
@@ -146,6 +158,27 @@ class MainWindow(QMainWindow):
         body.addStretch()
         layout.addWidget(content, 1)
         return root
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
+        if len(urls) == 1 and Path(urls[0].toLocalFile()).suffix.lower() in {".wav", ".mp3", ".flac", ".m4a"}:
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
+        if len(urls) != 1:
+            return
+        path = urls[0].toLocalFile()
+        status = reference_audio_status(path)
+        if not status["ready"]:
+            QMessageBox.warning(self, "Reference Voice", "The dropped recording is not ready for cloning.")
+            return
+        self.reference_audio = path
+        self.reference_button.setText(f"Reference Voice     •     Ready ({status['bytes'] / 1024:.0f} KB)")
+        self.my_voice_source.setChecked(True)
+        event.acceptProposedAction()
 
     def _choose_reference(self, button):
         path, _ = QFileDialog.getOpenFileName(self, "Choose Reference Voice", "", "Audio (*.wav *.mp3 *.flac *.m4a)")
