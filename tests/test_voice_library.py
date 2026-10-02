@@ -53,10 +53,26 @@ def test_remove_profile_preserves_reference_audio(tmp_path):
     ref = tmp_path / "voice.wav"
     ref.write_bytes(b"audio")
     profile = library.add("Keep Source", str(ref))
+    owned = Path(profile.reference_audio)
+    assert owned.is_file()
     assert library.remove(profile.id) is True
     assert ref.exists()
+    assert not owned.exists()
     assert library.list() == []
     assert library.remove(profile.id) is False
+
+
+def test_remove_legacy_external_reference_never_deletes_user_file(tmp_path):
+    library = VoiceLibrary(tmp_path / "data")
+    external = tmp_path / "legacy.wav"
+    external.write_bytes(b"legacy")
+    profile = library.add("Legacy", str(external))
+    profiles = library.list()
+    profiles[0].reference_audio = str(external.resolve())
+    library._save(profiles)
+    assert library.remove(profile.id) is True
+    assert external.is_file()
+    assert external.read_bytes() == b"legacy"
 
 
 def test_rename_profile_preserves_reference_audio(tmp_path):
