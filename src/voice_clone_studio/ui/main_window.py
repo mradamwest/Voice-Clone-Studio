@@ -3,7 +3,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 import tempfile
 
-from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request, reference_audio_status
+from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request, reference_audio_status, generation_output_path
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
         if not text:
             QMessageBox.information(self, "Text Required", "Enter text to generate.")
             return
-        output = str(Path(tempfile.gettempdir()) / "voice-clone-studio-output.wav")
+        output = str(generation_output_path(tempfile.gettempdir(), "voice-clone-studio-output.wav"))
         try:
             validate_generation_request(text, self.reference_audio, output)
         except (ValueError, FileNotFoundError) as exc:
