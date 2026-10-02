@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine, engine_status
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -134,3 +134,11 @@ def test_engine_status_does_not_load_model():
     assert status["device"] == "cpu"
     assert status["model_loaded"] is False
     assert isinstance(status["available"], bool)
+
+
+def test_validate_generation_request_normalizes_paths(tmp_path):
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    text, reference, out = validate_generation_request("  hello  ", str(ref), str(tmp_path / "out.wav"))
+    assert text == "hello"
+    assert reference == ref.resolve()
+    assert out == (tmp_path / "out.wav").resolve()
