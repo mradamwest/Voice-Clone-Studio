@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 class GenerateWorker(QThread):
     finished_audio = Signal(str)
     failed = Signal(str)
+    status = Signal(str)
 
     def __init__(self, text, reference_audio, output, allow_model_download=False):
         super().__init__()
@@ -23,7 +24,9 @@ class GenerateWorker(QThread):
 
     def run(self):
         try:
+            self.status.emit("Preparing voice model…")
             generation_preflight(self.text, self.reference_audio, self.output, allow_model_download=self.allow_model_download)
+            self.status.emit("Generating speech…")
             path = VoiceEngine().generate(self.text, self.reference_audio, self.output)
             self.finished_audio.emit(str(path))
         except Exception as exc:
@@ -166,6 +169,7 @@ class MainWindow(QMainWindow):
         self.generate_button.setText("Generating…")
         self.worker = GenerateWorker(text, self.reference_audio, output, allow_model_download=True)
         self.worker.finished_audio.connect(self._generation_finished)
+        self.worker.status.connect(self.generate_button.setText)
         self.worker.failed.connect(self._generation_failed)
         self.worker.start()
 
