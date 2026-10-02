@@ -112,3 +112,11 @@ def test_voice_names_are_deterministic(tmp_path):
     b = tmp_path / "b.wav"; b.write_bytes(b"b")
     library.add("Zulu", str(a)); library.add("alpha", str(b))
     assert library.names() == ("alpha", "Zulu")
+
+
+def test_find_voice_by_name_is_case_insensitive(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    profile = library.add("Narrator", str(ref))
+    assert library.find_by_name(" narrator ") == profile
+    assert library.find_by_name("missing") is None
