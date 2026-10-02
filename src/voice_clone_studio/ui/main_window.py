@@ -146,10 +146,19 @@ class MainWindow(QMainWindow):
             return
         output = str(generation_output_path(tempfile.gettempdir(), "voice-clone-studio-output.wav"))
         try:
-            generation_preflight(text, self.reference_audio, output, allow_model_download=True)
+            generation_preflight(text, self.reference_audio, output, allow_model_download=False)
         except (ValueError, FileNotFoundError, RuntimeError) as exc:
             QMessageBox.warning(self, "Cannot Generate", str(exc))
             return
+        try:
+            readiness = generation_preflight(text, self.reference_audio, output, allow_model_download=False)
+        except RuntimeError as exc:
+            if "download approval" not in str(exc).lower():
+                QMessageBox.warning(self, "Cannot Generate", str(exc)); return
+            answer = QMessageBox.question(self, "Model Download Required", "The voice model is not cached yet and must be downloaded before first use. Continue?")
+            if answer != QMessageBox.Yes:
+                return
+            generation_preflight(text, self.reference_audio, output, allow_model_download=True)
         self.generated_audio = ""
         self.preview_button.setEnabled(False)
         self.play_button.setEnabled(False)
