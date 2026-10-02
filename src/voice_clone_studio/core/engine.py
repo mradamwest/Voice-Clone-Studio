@@ -78,3 +78,13 @@ class VoiceEngine:
         if not out.is_file() or out.stat().st_size == 0:
             raise RuntimeError("Generated voice audio was not written successfully.")
         return out
+
+
+def engine_status(device: str | None = None) -> dict[str, object]:
+    """Return lightweight readiness information without loading model weights."""
+    engine = VoiceEngine(device)
+    return {
+        "available": engine.available,
+        "device": engine._best_device(),
+        "model_loaded": engine._model is not None,
+    }
