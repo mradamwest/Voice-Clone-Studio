@@ -88,3 +88,23 @@ def engine_status(device: str | None = None) -> dict[str, object]:
         "device": engine._best_device(),
         "model_loaded": engine._model is not None,
     }
+
+
+def validate_generation_request(text: str, reference_audio: str, output: str) -> tuple[str, Path, Path]:
+    """Validate a generation request without loading the voice model."""
+    clean_text = text.strip()
+    if not clean_text:
+        raise ValueError("Text cannot be empty.")
+    reference = Path(reference_audio).expanduser().resolve()
+    if reference.suffix.lower() not in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}:
+        raise ValueError("Unsupported reference audio format.")
+    if not reference.is_file():
+        raise FileNotFoundError(reference)
+    if reference.stat().st_size == 0:
+        raise ValueError("Reference audio file is empty.")
+    out = Path(output).expanduser().resolve()
+    if out == reference:
+        raise ValueError("Output file cannot overwrite the reference audio.")
+    if out.suffix.lower() != ".wav":
+        raise ValueError("Voice output must be a WAV file.")
+    return clean_text, reference, out
