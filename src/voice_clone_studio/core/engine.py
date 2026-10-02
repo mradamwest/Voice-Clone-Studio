@@ -48,13 +48,17 @@ class VoiceEngine:
                 )
         return self._model
 
-    def generate(self, text: str, reference_audio: str, output: str) -> Path:
+    def generate(self, text: str, reference_audio: str, output: str, language_id: str = "en") -> Path:
         """Generate cloned speech without loading the model until validation passes."""
         clean_text, reference, out = validate_generation_request(text, reference_audio, output)
         if not clean_text:
             raise ValueError("Text cannot be empty.")
         model = self._load()
-        wav = model.generate(clean_text, audio_prompt_path=str(reference))
+        language_id = language_id.strip().lower()
+        supported = getattr(model, "get_supported_languages", lambda: {})()
+        if supported and language_id not in supported:
+            raise ValueError(f"Unsupported language: {language_id}")
+        wav = model.generate(clean_text, language_id=language_id, audio_prompt_path=str(reference))
         if wav is None or not hasattr(wav, "numel") or wav.numel() == 0:
             raise RuntimeError("Voice engine returned no audio.")
         import torchaudio
