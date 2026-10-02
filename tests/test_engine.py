@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine, engine_status, ensure_voice_ready, first_run_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, verify_generated_audio
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, ensure_voice_ready, first_run_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, generation_preflight, verify_generated_audio
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -195,3 +195,11 @@ def test_ensure_voice_ready_requires_download_approval(monkeypatch):
     with pytest.raises(RuntimeError, match="approval"):
         ensure_voice_ready()
     assert ensure_voice_ready(allow_model_download=True)["requires_model_download"] is True
+
+
+def test_generation_preflight_combines_request_and_model_readiness(monkeypatch, tmp_path):
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    monkeypatch.setattr("voice_clone_studio.core.engine.ensure_voice_ready", lambda allow_model_download=False: {"runtime_available": True, "model_cached": True})
+    status = generation_preflight(" hello ", str(ref), str(tmp_path / "out.wav"))
+    assert status["text"] == "hello"
+    assert status["model_cached"] is True
