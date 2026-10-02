@@ -146,3 +146,11 @@ class VoiceLibrary:
     def names(self) -> tuple[str, ...]:
         """Return saved voice names in deterministic case-insensitive order."""
         return tuple(sorted((profile.name for profile in self.list()), key=str.casefold))
+
+
+    def find_by_name(self, name: str) -> VoiceProfile | None:
+        """Find a saved voice by name using Windows-friendly case-insensitive matching."""
+        target = name.strip().casefold()
+        if not target:
+            return None
+        return next((p for p in self.list() if p.name.casefold() == target), None)
