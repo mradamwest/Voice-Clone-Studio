@@ -58,6 +58,8 @@ class VoiceEngine:
             raise ValueError("Reference audio file is empty.")
         model = self._load()
         wav = model.generate(text.strip(), audio_prompt_path=str(reference))
+        if wav is None or not hasattr(wav, "numel") or wav.numel() == 0:
+            raise RuntimeError("Voice engine returned no audio.")
         import torchaudio
         out = Path(output).expanduser().resolve()
         if out.suffix.lower() != ".wav":
