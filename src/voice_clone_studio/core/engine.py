@@ -75,4 +75,6 @@ class VoiceEngine:
         if not isinstance(sample_rate, int) or sample_rate <= 0:
             raise RuntimeError("Voice engine returned an invalid sample rate.")
         torchaudio.save(str(out), wav, sample_rate)
+        if not out.is_file() or out.stat().st_size == 0:
+            raise RuntimeError("Generated voice audio was not written successfully.")
         return out
