@@ -89,3 +89,23 @@ def test_unsupported_reference_format_is_rejected_before_model_load(tmp_path):
         assert "Unsupported reference audio format" in str(exc)
     else:
         raise AssertionError("unsupported reference format must be rejected")
+
+
+def test_output_directory_path_is_rejected(tmp_path):
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"x")
+    out = tmp_path / "folder.wav"
+    out.mkdir()
+    engine = VoiceEngine("cpu")
+    class FakeWave:
+        def numel(self): return 1
+    class FakeModel:
+        sr = 24000
+        def generate(self, *args, **kwargs): return FakeWave()
+    engine._model = FakeModel()
+    try:
+        engine.generate("hello", str(ref), str(out))
+    except ValueError as exc:
+        assert "directory" in str(exc).lower()
+    else:
+        raise AssertionError("directory output path must be rejected")
