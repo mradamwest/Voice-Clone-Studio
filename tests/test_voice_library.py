@@ -83,3 +83,14 @@ def test_validate_references_reports_missing_source(tmp_path):
     ref.unlink()
     issues = library.validate_references()
     assert issues[profile.id] == "Reference audio file is missing."
+
+
+def test_update_language_preserves_voice_source(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"audio")
+    profile = library.add("Language Test", str(ref))
+    updated = library.update_language(profile.id, "en")
+    assert updated.language == "en"
+    assert Path(updated.reference_audio) == ref.resolve()
+    assert ref.exists()
