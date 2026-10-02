@@ -31,6 +31,7 @@ class VoiceEngine:
             if not self.available:
                 raise RuntimeError("Chatterbox multilingual engine is not installed.")
             from voice_clone_studio.core.chatterbox_runtime import load_multilingual_tts_class
+            ChatterboxMultilingualTTS = load_multilingual_tts_class()
             try:
                 # Current upstream V3 documentation accepts t3_model="v3".
                 self._model = ChatterboxMultilingualTTS.from_pretrained(
