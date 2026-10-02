@@ -100,6 +100,12 @@ class MainWindow(QMainWindow):
         source_row.addWidget(self.my_voice_source); source_row.addWidget(self.builtin_voice_source); source_row.addStretch()
         c.addLayout(source_row)
         c.addWidget(QLabel("SELECT VOICE"))
+        self.saved_voice_combo = QComboBox()
+        self.saved_voice_combo.addItem("Choose a saved voice…", "")
+        for profile in self.voice_library.list():
+            self.saved_voice_combo.addItem(profile.name, profile.id)
+        self.saved_voice_combo.currentIndexChanged.connect(self._select_saved_voice)
+        c.addWidget(self.saved_voice_combo)
         voice = QPushButton("Choose or Drop Reference Voice…")
         voice.setObjectName("voice")
         self.reference_button = voice
@@ -163,6 +169,24 @@ class MainWindow(QMainWindow):
         body.addStretch()
         layout.addWidget(content, 1)
         return root
+
+    def _select_saved_voice(self, index):
+        profile_id = self.saved_voice_combo.itemData(index)
+        if not profile_id:
+            return
+        try:
+            profile = self.voice_library.get(profile_id)
+        except KeyError:
+            QMessageBox.warning(self, "My Voices", "That saved voice is no longer available.")
+            return
+        status = reference_audio_status(profile.reference_audio)
+        if not status["ready"]:
+            QMessageBox.warning(self, "My Voices", f"{profile.name} is missing its reference recording.")
+            return
+        self.reference_audio = profile.reference_audio
+        self.active_voice_name = profile.name
+        self.reference_button.setText(f"Saved Voice     •     {profile.name}")
+        self.my_voice_source.setChecked(True)
 
     def dragEnterEvent(self, event):
         urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
