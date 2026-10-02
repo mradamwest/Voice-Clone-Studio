@@ -205,3 +205,36 @@ def test_generation_preflight_combines_request_and_model_readiness(monkeypatch, 
     status = generation_preflight(" hello ", str(ref), str(tmp_path / "out.wav"))
     assert status["text"] == "hello"
     assert status["model_cached"] is True
+
+
+def test_multilingual_loader_uses_v2_compatibility_checkpoint(monkeypatch):
+    calls = []
+    class FakeMultilingual:
+        @classmethod
+        def from_pretrained(cls, **kwargs):
+            calls.append(kwargs)
+            return object()
+    monkeypatch.setattr("voice_clone_studio.core.chatterbox_runtime.load_multilingual_tts_class", lambda: FakeMultilingual)
+    monkeypatch.setattr(VoiceEngine, "available", property(lambda self: True))
+    engine = VoiceEngine("cpu")
+    engine._load()
+    assert calls == [{"device": "cpu", "t3_model": "v2"}]
+
+
+def test_arabic_generation_passes_ar_language_id(monkeypatch, tmp_path):
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    out = tmp_path / "arabic.wav"
+    calls = []
+    class FakeWave:
+        def numel(self): return 1
+    class FakeModel:
+        sr = 24000
+        def get_supported_languages(self): return {"en": "English", "ar": "Arabic"}
+        def generate(self, text, **kwargs):
+            calls.append((text, kwargs))
+            return FakeWave()
+    engine = VoiceEngine("cpu"); engine._model = FakeModel()
+    monkeypatch.setattr("torchaudio.save", lambda path, wav, sr: Path(path).write_bytes(b"RIFFarabic"))
+    engine.generate("مرحبا بكم", str(ref), str(out), language_id="AR")
+    assert calls == [("مرحبا بكم", {"language_id": "ar", "audio_prompt_path": str(ref.resolve())})]
+    assert out.is_file()
