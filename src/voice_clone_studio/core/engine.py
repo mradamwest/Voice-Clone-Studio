@@ -46,12 +46,16 @@ class VoiceEngine:
         return self._model
 
     def generate(self, text: str, reference_audio: str, output: str) -> Path:
+        """Generate cloned speech without loading the model until validation passes."""
         if not text.strip():
             raise ValueError("Text cannot be empty.")
-        if not Path(reference_audio).is_file():
-            raise FileNotFoundError(reference_audio)
+        reference = Path(reference_audio).expanduser().resolve()
+        if not reference.is_file():
+            raise FileNotFoundError(reference)
+        if reference.stat().st_size == 0:
+            raise ValueError("Reference audio file is empty.")
         model = self._load()
-        wav = model.generate(text, audio_prompt_path=reference_audio)
+        wav = model.generate(text.strip(), audio_prompt_path=str(reference))
         import torchaudio
         out = Path(output)
         out.parent.mkdir(parents=True, exist_ok=True)
