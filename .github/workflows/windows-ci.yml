@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -42,10 +42,10 @@ jobs:
           Remove-Item $marker -ErrorAction SilentlyContinue
           $env:VOICE_ENGINE_SELF_TEST_MARKER = $marker
           $p = Start-Process ".\dist\Voice Clone Studio\Voice Clone Studio.exe" -ArgumentList "--engine-import-self-test" -PassThru
-          if (-not $p.WaitForExit(300000)) {
+          if (-not $p.WaitForExit(180000)) {
             $progress = if (Test-Path $marker) { Get-Content $marker -Raw } else { "no progress marker" }
             taskkill /PID $p.Id /T /F | Out-Null
-            throw "Packaged Chatterbox engine import self-test timed out after 300 seconds. Progress: $progress"
+            throw "Packaged Chatterbox engine import self-test timed out after 180 seconds. Progress: $progress"
           }
           if ($p.ExitCode -ne 0) {
             $progress = if (Test-Path $marker) { Get-Content $marker -Raw } else { "no progress marker" }
