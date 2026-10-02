@@ -63,3 +63,13 @@ def test_rename_profile_preserves_reference_audio(tmp_path):
     assert renamed.name == "Renamed"
     assert Path(renamed.reference_audio) == ref.resolve()
     assert ref.exists()
+
+
+def test_get_profile_by_stable_id(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"audio")
+    profile = library.add("Lookup", str(ref))
+    assert library.get(profile.id) == profile
+    with pytest.raises(KeyError):
+        library.get("missing-id")
