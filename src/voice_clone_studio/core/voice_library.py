@@ -47,9 +47,13 @@ class VoiceLibrary:
         clean_name = name.strip()
         if not clean_name:
             raise ValueError("Voice name cannot be empty.")
-        ref = Path(reference_audio)
+        ref = Path(reference_audio).expanduser().resolve()
         if not ref.is_file():
-            raise FileNotFoundError(reference_audio)
+            raise FileNotFoundError(ref)
+        if ref.stat().st_size == 0:
+            raise ValueError("Reference audio file is empty.")
+        if any(v.name.casefold() == clean_name.casefold() for v in self.list()):
+            raise ValueError(f'A voice named "{clean_name}" already exists.')
         profile = VoiceProfile(str(uuid.uuid4()), clean_name, str(ref), language)
         voices = self.list()
         voices.append(profile)
