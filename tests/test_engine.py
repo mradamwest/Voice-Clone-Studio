@@ -109,3 +109,21 @@ def test_output_directory_path_is_rejected(tmp_path):
         assert "directory" in str(exc).lower()
     else:
         raise AssertionError("directory output path must be rejected")
+
+
+def test_invalid_sample_rate_is_rejected(tmp_path):
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"x")
+    engine = VoiceEngine("cpu")
+    class FakeWave:
+        def numel(self): return 1
+    class FakeModel:
+        sr = 0
+        def generate(self, *args, **kwargs): return FakeWave()
+    engine._model = FakeModel()
+    try:
+        engine.generate("hello", str(ref), str(tmp_path / "out.wav"))
+    except RuntimeError as exc:
+        assert "sample rate" in str(exc).lower()
+    else:
+        raise AssertionError("invalid sample rate must be rejected")
