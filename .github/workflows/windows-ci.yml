@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       QT_QPA_PLATFORM: offscreen
     steps:
@@ -79,7 +79,11 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "Silent install failed with exit code $($p.ExitCode)" }
           $exe = Join-Path $installDir "Voice Clone Studio.exe"
           if (!(Test-Path $exe)) { throw "Installed executable missing" }
-          $p = Start-Process $exe -ArgumentList "--app-import-self-test" -Wait -PassThru
+          $p = Start-Process $exe -ArgumentList "--app-import-self-test" -PassThru
+          if (-not $p.WaitForExit(180000)) {
+            taskkill /PID $p.Id /T /F | Out-Null
+            throw "Installed app self-test timed out after 180 seconds"
+          }
           if ($p.ExitCode -ne 0) { throw "Installed app self-test failed with exit code $($p.ExitCode)" }
           if (!(Test-Path $desktopShortcut)) { throw "Desktop shortcut missing after install" }
           if (!(Test-Path $startShortcut)) { throw "Start Menu shortcut missing after install" }
