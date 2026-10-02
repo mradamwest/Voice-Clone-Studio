@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request, model_cache_status
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -152,3 +152,11 @@ def test_generate_uses_shared_request_validation(tmp_path):
         assert "Unsupported reference audio format" in str(exc)
     else:
         raise AssertionError("shared validation must reject unsupported reference audio")
+
+
+def test_model_cache_status_does_not_require_cache(monkeypatch, tmp_path):
+    monkeypatch.setenv("TORCH_HOME", str(tmp_path / "torch-home"))
+    status = model_cache_status()
+    assert status["exists"] is False
+    assert status["files"] == ()
+    assert status["bytes"] == 0
