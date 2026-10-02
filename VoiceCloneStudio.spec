@@ -1,17 +1,9 @@
-from pathlib import Path
-
 import chatterbox
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
 hiddenimports = collect_submodules("voice_clone_studio")
 datas = []
 binaries = []
-
-# chatterbox_runtime loads mtl_tts from its physical package path to avoid
-# executing Chatterbox's eager package __init__. Keep that source file beside
-# the frozen package so the same safe loader works in the packaged app.
-chatterbox_dir = Path(chatterbox.__file__).resolve().parent
-datas.append((str(chatterbox_dir / "mtl_tts.py"), "chatterbox"))
 
 # Chatterbox's package-level __init__ eagerly imports every engine variant.
 # Do NOT collect the whole package: that drags optional Turbo/VC dependency
