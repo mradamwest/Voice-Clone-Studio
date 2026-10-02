@@ -97,3 +97,15 @@ class VoiceLibrary:
         if profile is None:
             raise KeyError(profile_id)
         return profile
+
+
+    def validate_references(self) -> dict[str, str]:
+        """Report saved profiles whose original reference audio is no longer usable."""
+        issues: dict[str, str] = {}
+        for profile in self.list():
+            path = Path(profile.reference_audio).expanduser()
+            if not path.is_file():
+                issues[profile.id] = "Reference audio file is missing."
+            elif path.stat().st_size == 0:
+                issues[profile.id] = "Reference audio file is empty."
+        return issues
