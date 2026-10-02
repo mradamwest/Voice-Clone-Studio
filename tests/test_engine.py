@@ -60,3 +60,21 @@ def test_output_extension_is_validated_before_save(tmp_path):
         assert "WAV" in str(exc)
     else:
         raise AssertionError("non-WAV output must be rejected")
+
+
+def test_reference_cannot_be_overwritten(tmp_path):
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"x")
+    engine = VoiceEngine("cpu")
+    class FakeWave:
+        def numel(self): return 1
+    class FakeModel:
+        sr = 24000
+        def generate(self, *args, **kwargs): return FakeWave()
+    engine._model = FakeModel()
+    try:
+        engine.generate("hello", str(ref), str(ref))
+    except ValueError as exc:
+        assert "overwrite" in str(exc).lower()
+    else:
+        raise AssertionError("reference overwrite must be rejected")
