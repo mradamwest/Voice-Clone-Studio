@@ -109,3 +109,17 @@ class VoiceLibrary:
             elif path.stat().st_size == 0:
                 issues[profile.id] = "Reference audio file is empty."
         return issues
+
+
+    def update_language(self, profile_id: str, language: str) -> VoiceProfile:
+        """Update a saved voice language hint without changing its source audio."""
+        clean = language.strip() or "auto"
+        if len(clean) > 32:
+            raise ValueError("Language value cannot exceed 32 characters.")
+        profiles = self.list()
+        target = next((p for p in profiles if p.id == profile_id), None)
+        if target is None:
+            raise KeyError(profile_id)
+        updated = VoiceProfile(target.id, target.name, target.reference_audio, clean)
+        self._save([updated if p.id == profile_id else p for p in profiles])
+        return updated
