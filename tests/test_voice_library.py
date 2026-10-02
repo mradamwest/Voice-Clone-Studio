@@ -109,8 +109,14 @@ def test_replace_reference_preserves_old_and_new_audio(tmp_path):
     new = tmp_path / "new.wav"; new.write_bytes(b"new")
     profile = library.add("Replace Test", str(old))
     updated = library.replace_reference(profile.id, str(new))
-    assert Path(updated.reference_audio) == new.resolve()
+    saved = Path(updated.reference_audio)
+    assert saved.parent == library.references
+    assert saved.read_bytes() == b"new"
     assert old.exists() and new.exists()
+    new.unlink()
+    assert saved.is_file()
+    assert saved.read_bytes() == b"new"
+    assert library.validate_references() == {}
 
 
 def test_voice_names_are_deterministic(tmp_path):
