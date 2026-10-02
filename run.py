@@ -10,19 +10,25 @@ def _self_test() -> int:
     return 0
 
 def _engine_self_test() -> int:
-    # Import the exact modules needed by Generate Speech from the packaged EXE.
-    # This catches the failure that a source-environment import test cannot.
+    # Import the same lazy modules Generate Speech needs. Emit progress markers
+    # so CI can distinguish a slow import from a missing/broken packaged module.
+    marker = os.environ.get("VOICE_ENGINE_SELF_TEST_MARKER")
+    def mark(name: str) -> None:
+        if marker:
+            with open(marker, "a", encoding="utf-8") as handle:
+                handle.write(name + "\\n")
+                handle.flush()
+    mark("start")
     import torch
+    mark("torch")
     import torchaudio
+    mark("torchaudio")
     import chatterbox
+    mark("chatterbox")
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
-    assert torch
-    assert torchaudio
-    assert chatterbox
-    assert ChatterboxMultilingualTTS
-    # Torch/audio native runtimes can keep non-Python worker state alive after
-    # successful imports. This is a packaging probe, so exit immediately once
-    # all required engine modules have loaded.
+    mark("mtl_tts")
+    assert torch and torchaudio and chatterbox and ChatterboxMultilingualTTS
+    mark("success")
     os._exit(0)
 
 if __name__ == "__main__":

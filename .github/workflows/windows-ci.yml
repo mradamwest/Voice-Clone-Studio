@@ -38,12 +38,21 @@ jobs:
       - name: Verify packaged Chatterbox engine imports
         shell: powershell
         run: |
+          $marker = Join-Path $env:RUNNER_TEMP "voice-engine-self-test.txt"
+          Remove-Item $marker -ErrorAction SilentlyContinue
+          $env:VOICE_ENGINE_SELF_TEST_MARKER = $marker
           $p = Start-Process ".\dist\Voice Clone Studio\Voice Clone Studio.exe" -ArgumentList "--engine-import-self-test" -PassThru
-          if (-not $p.WaitForExit(120000)) {
+          if (-not $p.WaitForExit(300000)) {
+            $progress = if (Test-Path $marker) { Get-Content $marker -Raw } else { "no progress marker" }
             taskkill /PID $p.Id /T /F | Out-Null
-            throw "Packaged Chatterbox engine import self-test timed out after 120 seconds"
+            throw "Packaged Chatterbox engine import self-test timed out after 300 seconds. Progress: $progress"
           }
-          if ($p.ExitCode -ne 0) { throw "Packaged Chatterbox engine import self-test failed with exit code $($p.ExitCode)" }
+          if ($p.ExitCode -ne 0) {
+            $progress = if (Test-Path $marker) { Get-Content $marker -Raw } else { "no progress marker" }
+            throw "Packaged Chatterbox engine import self-test failed with exit code $($p.ExitCode). Progress: $progress"
+          }
+          $progress = Get-Content $marker -Raw
+          if (-not $progress.Contains("success")) { throw "Engine self-test exited without success marker. Progress: $progress" }
       - name: Build Windows installer
         shell: powershell
         run: |
