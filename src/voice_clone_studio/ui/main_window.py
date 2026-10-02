@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt, QThread, Signal, QUrl, QStandardPaths, QSettings
+from PySide6.QtCore import Qt, QThread, Signal, QUrl, QStandardPaths
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 
@@ -46,7 +46,6 @@ class MainWindow(QMainWindow):
         self.voice_library = VoiceLibrary()
         self.generated_library = GeneratedVoiceLibrary()
         self.active_voice_name = "Reference Voice"
-        self.settings = QSettings("Voice Clone Studio", "Voice Clone Studio")
         self.worker = None
         self.generated_audio = ""
         self.audio_output = QAudioOutput(self)
@@ -92,40 +91,6 @@ class MainWindow(QMainWindow):
         card.setObjectName("card")
         c = QVBoxLayout(card)
         c.setContentsMargins(28, 24, 28, 24)
-        c.addWidget(QLabel("VOICE SOURCE"))
-        source_row = QHBoxLayout()
-        self.my_voice_source = QPushButton("My Voice")
-        self.builtin_voice_source = QPushButton("Built-in Voice")
-        self.my_voice_source.setCheckable(True); self.builtin_voice_source.setCheckable(True)
-        self.my_voice_source.setChecked(True)
-        self.voice_source_group = QButtonGroup(self); self.voice_source_group.setExclusive(True)
-        self.voice_source_group.addButton(self.my_voice_source); self.voice_source_group.addButton(self.builtin_voice_source)
-        source_row.addWidget(self.my_voice_source); source_row.addWidget(self.builtin_voice_source); source_row.addStretch()
-        c.addLayout(source_row)
-        c.addWidget(QLabel("BUILT-IN VOICE"))
-        built_in_type_row = QHBoxLayout()
-        self.builtin_type_group = QButtonGroup(self); self.builtin_type_group.setExclusive(True)
-        self.builtin_type_buttons = {}
-        for label in ("Man", "Woman", "Kid"):
-            button = QPushButton(label); button.setCheckable(True)
-            self.builtin_type_group.addButton(button); self.builtin_type_buttons[label] = button
-            built_in_type_row.addWidget(button)
-        built_in_type_row.addStretch(); c.addLayout(built_in_type_row)
-        built_in_age_row = QHBoxLayout()
-        self.builtin_age_group = QButtonGroup(self); self.builtin_age_group.setExclusive(True)
-        self.builtin_age_buttons = {}
-        for label in ("Young", "Middle Age", "Old"):
-            button = QPushButton(label); button.setCheckable(True)
-            self.builtin_age_group.addButton(button); self.builtin_age_buttons[label] = button
-            built_in_age_row.addWidget(button)
-        built_in_age_row.addStretch(); c.addLayout(built_in_age_row)
-        saved_type = self.settings.value("builtInVoiceType", "Man")
-        saved_age = self.settings.value("builtInVoiceAge", "Middle Age")
-        self.builtin_type_buttons.get(saved_type, self.builtin_type_buttons["Man"]).setChecked(True)
-        self.builtin_age_buttons.get(saved_age, self.builtin_age_buttons["Middle Age"]).setChecked(True)
-        self.builtin_type_group.buttonClicked.connect(self._remember_builtin_voice_selection)
-        self.builtin_age_group.buttonClicked.connect(self._remember_builtin_voice_selection)
-        self.builtin_voice_source.clicked.connect(self._built_in_voice_not_ready)
         c.addWidget(QLabel("SELECT VOICE"))
         self.saved_voice_combo = QComboBox()
         self.saved_voice_combo.addItem("Choose a saved voice…", "")
@@ -216,21 +181,6 @@ class MainWindow(QMainWindow):
         self.generated_voices_nav.clicked.connect(self._show_generated_voices)
         layout.addWidget(self.pages, 1)
         return root
-
-    def _remember_builtin_voice_selection(self, *_):
-        voice_type = next((name for name, button in self.builtin_type_buttons.items() if button.isChecked()), "Man")
-        voice_age = next((name for name, button in self.builtin_age_buttons.items() if button.isChecked()), "Middle Age")
-        self.settings.setValue("builtInVoiceType", voice_type)
-        self.settings.setValue("builtInVoiceAge", voice_age)
-
-    def _built_in_voice_not_ready(self):
-        self._remember_builtin_voice_selection()
-        QMessageBox.information(
-            self,
-            "Built-in Voice",
-            "Built-in voice choices are being prepared with real reference voices. Your selection is saved, but generation remains on My Voice until those voice assets are verified.",
-        )
-        self.my_voice_source.setChecked(True)
 
     def _build_generated_voices_page(self):
         page = QWidget()
@@ -494,7 +444,6 @@ class MainWindow(QMainWindow):
         self.reference_audio = path
         self.active_voice_name = Path(path).stem
         self.reference_button.setText(f"Reference Voice     •     Ready ({status['bytes'] / 1024:.0f} KB)")
-        self.my_voice_source.setChecked(True)
         event.acceptProposedAction()
 
     def _choose_reference(self, button):
