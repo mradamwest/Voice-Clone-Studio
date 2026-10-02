@@ -141,3 +141,8 @@ class VoiceLibrary:
         updated = VoiceProfile(target.id, target.name, str(reference), target.language)
         self._save([updated if p.id == profile_id else p for p in profiles])
         return updated
+
+
+    def names(self) -> tuple[str, ...]:
+        """Return saved voice names in deterministic case-insensitive order."""
+        return tuple(sorted((profile.name for profile in self.list()), key=str.casefold))
