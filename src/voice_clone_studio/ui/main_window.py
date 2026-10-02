@@ -3,7 +3,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 import tempfile
 
-from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request, reference_audio_status, generation_output_path
+from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request, reference_audio_status, generation_output_path, verify_generated_audio
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
@@ -159,6 +159,11 @@ class MainWindow(QMainWindow):
         self.worker.start()
 
     def _generation_finished(self, path):
+        try:
+            verify_generated_audio(path)
+        except (ValueError, FileNotFoundError, RuntimeError) as exc:
+            self._generation_failed(str(exc))
+            return
         self.generated_audio = path
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate Speech")
