@@ -8,7 +8,7 @@ from voice_clone_studio.core.generated_library import GeneratedVoiceLibrary
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
-    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar, QButtonGroup
+    QSlider, QTextEdit, QVBoxLayout, QWidget, QFileDialog, QLineEdit, QComboBox, QMessageBox, QProgressBar, QButtonGroup, QInputDialog
 )
 
 class GenerateWorker(QThread):
@@ -106,6 +106,18 @@ class MainWindow(QMainWindow):
             self.saved_voice_combo.addItem(profile.name, profile.id)
         self.saved_voice_combo.currentIndexChanged.connect(self._select_saved_voice)
         c.addWidget(self.saved_voice_combo)
+        saved_actions = QHBoxLayout()
+        save_voice = QPushButton("Save Current Voice")
+        save_voice.clicked.connect(self._save_current_voice)
+        preview_voice = QPushButton("Preview")
+        preview_voice.clicked.connect(self._preview_saved_voice)
+        rename_voice = QPushButton("Rename")
+        rename_voice.clicked.connect(self._rename_saved_voice)
+        delete_voice = QPushButton("Delete")
+        delete_voice.clicked.connect(self._delete_saved_voice)
+        saved_actions.addWidget(save_voice); saved_actions.addWidget(preview_voice)
+        saved_actions.addWidget(rename_voice); saved_actions.addWidget(delete_voice); saved_actions.addStretch()
+        c.addLayout(saved_actions)
         voice = QPushButton("Choose or Drop Reference Voice…")
         voice.setObjectName("voice")
         self.reference_button = voice
@@ -169,6 +181,100 @@ class MainWindow(QMainWindow):
         body.addStretch()
         layout.addWidget(content, 1)
         return root
+
+    def _refresh_saved_voices(self, selected_id=""):
+        self.saved_voice_combo.blockSignals(True)
+        self.saved_voice_combo.clear()
+        self.saved_voice_combo.addItem("Choose a saved voice…", "")
+        selected_index = 0
+        for profile in self.voice_library.list():
+            self.saved_voice_combo.addItem(profile.name, profile.id)
+            if profile.id == selected_id:
+                selected_index = self.saved_voice_combo.count() - 1
+        self.saved_voice_combo.setCurrentIndex(selected_index)
+        self.saved_voice_combo.blockSignals(False)
+
+    def _selected_saved_voice(self):
+        profile_id = self.saved_voice_combo.currentData()
+        if not profile_id:
+            return None
+        try:
+            return self.voice_library.get(profile_id)
+        except KeyError:
+            self._refresh_saved_voices()
+            return None
+
+    def _save_current_voice(self):
+        if not self.reference_audio:
+            QMessageBox.information(self, "My Voices", "Choose a reference voice recording first.")
+            return
+        status = reference_audio_status(self.reference_audio)
+        if not status["ready"]:
+            QMessageBox.warning(self, "My Voices", "The current reference recording is not ready to save.")
+            return
+        name, ok = QInputDialog.getText(self, "Save Voice", "Voice name:", text=self.active_voice_name)
+        name = name.strip()
+        if not ok or not name:
+            return
+        try:
+            profile = self.voice_library.add(name, self.reference_audio)
+        except (ValueError, FileNotFoundError) as exc:
+            QMessageBox.warning(self, "My Voices", str(exc))
+            return
+        self._refresh_saved_voices(profile.id)
+        self.reference_audio = profile.reference_audio
+        self.active_voice_name = profile.name
+        self.reference_button.setText(f"Saved Voice     •     {profile.name}")
+
+    def _preview_saved_voice(self):
+        profile = self._selected_saved_voice()
+        if profile is None:
+            QMessageBox.information(self, "My Voices", "Choose a saved voice to preview.")
+            return
+        status = reference_audio_status(profile.reference_audio)
+        if not status["ready"]:
+            QMessageBox.warning(self, "My Voices", f"{profile.name} is missing its reference recording.")
+            return
+        self.player.setSource(QUrl.fromLocalFile(profile.reference_audio))
+        self.player.play()
+
+    def _rename_saved_voice(self):
+        profile = self._selected_saved_voice()
+        if profile is None:
+            QMessageBox.information(self, "My Voices", "Choose a saved voice to rename.")
+            return
+        name, ok = QInputDialog.getText(self, "Rename Voice", "Voice name:", text=profile.name)
+        name = name.strip()
+        if not ok or not name or name == profile.name:
+            return
+        try:
+            updated = self.voice_library.rename(profile.id, name)
+        except (ValueError, KeyError) as exc:
+            QMessageBox.warning(self, "My Voices", str(exc))
+            return
+        self._refresh_saved_voices(updated.id)
+        if self.reference_audio == updated.reference_audio:
+            self.active_voice_name = updated.name
+            self.reference_button.setText(f"Saved Voice     •     {updated.name}")
+
+    def _delete_saved_voice(self):
+        profile = self._selected_saved_voice()
+        if profile is None:
+            QMessageBox.information(self, "My Voices", "Choose a saved voice to delete.")
+            return
+        answer = QMessageBox.question(
+            self, "Delete Saved Voice",
+            f'Delete "{profile.name}" from My Voices?\n\nYour original recording will not be deleted.',
+        )
+        if answer != QMessageBox.Yes:
+            return
+        was_active = self.reference_audio == profile.reference_audio
+        if self.voice_library.remove(profile.id):
+            self._refresh_saved_voices()
+            if was_active:
+                self.reference_audio = ""
+                self.active_voice_name = "Reference Voice"
+                self.reference_button.setText("Choose or Drop Reference Voice…")
 
     def _select_saved_voice(self, index):
         profile_id = self.saved_voice_combo.itemData(index)
