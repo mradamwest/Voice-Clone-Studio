@@ -98,7 +98,10 @@ class MainWindow(QMainWindow):
         c.addLayout(controls)
 
         actions = QHBoxLayout()
-        preview = QPushButton("Preview")
+        preview = QPushButton("Save Generated Audio…")
+        self.preview_button = preview
+        preview.setEnabled(False)
+        preview.clicked.connect(self._save_generated_audio)
         generate = QPushButton("Generate Speech")
         generate.setObjectName("primary")
         self.generate_button = generate
@@ -138,7 +141,20 @@ class MainWindow(QMainWindow):
         self.generated_audio = path
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate Speech")
+        self.preview_button.setEnabled(True)
         QMessageBox.information(self, "Voice Clone Studio", f"Speech generated successfully.\n\n{path}")
+
+    def _save_generated_audio(self):
+        if not self.generated_audio or not Path(self.generated_audio).is_file():
+            QMessageBox.information(self, "Generated Audio", "Generate speech before saving audio.")
+            return
+        destination, _ = QFileDialog.getSaveFileName(
+            self, "Save Generated Audio", "voice-clone.wav", "WAV Audio (*.wav)"
+        )
+        if destination:
+            import shutil
+            shutil.copy2(self.generated_audio, destination)
+            QMessageBox.information(self, "Voice Clone Studio", f"Audio saved successfully.\n\n{destination}")
 
     def _generation_failed(self, message):
         self.generate_button.setEnabled(True)
