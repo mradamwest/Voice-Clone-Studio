@@ -148,3 +148,17 @@ def verify_generated_audio(path: str | Path) -> dict[str, object]:
     if size <= 0:
         raise RuntimeError("Generated audio file is empty.")
     return {"path": str(audio), "bytes": size, "ready": True}
+
+
+def first_run_status() -> dict[str, object]:
+    """Return UI-ready first-run voice model state without loading/downloading weights."""
+    engine = engine_status("cpu")
+    cache = model_cache_status()
+    cached = bool(cache["files"])
+    return {
+        "runtime_available": engine["available"],
+        "cache_directory": cache["directory"],
+        "cached_files": cache["files"],
+        "model_cached": cached,
+        "requires_model_download": bool(engine["available"]) and not cached,
+    }
