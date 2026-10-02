@@ -1,4 +1,5 @@
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal, QUrl
+from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 import tempfile
 
@@ -37,6 +38,9 @@ class MainWindow(QMainWindow):
         self.reference_audio = ""
         self.worker = None
         self.generated_audio = ""
+        self.audio_output = QAudioOutput(self)
+        self.player = QMediaPlayer(self)
+        self.player.setAudioOutput(self.audio_output)
         self.setCentralWidget(self._build())
 
     def _build(self):
@@ -98,6 +102,10 @@ class MainWindow(QMainWindow):
         c.addLayout(controls)
 
         actions = QHBoxLayout()
+        play = QPushButton("Play Generated Audio")
+        self.play_button = play
+        play.setEnabled(False)
+        play.clicked.connect(self._play_generated_audio)
         preview = QPushButton("Save Generated Audio…")
         self.preview_button = preview
         preview.setEnabled(False)
@@ -107,6 +115,7 @@ class MainWindow(QMainWindow):
         self.generate_button = generate
         generate.clicked.connect(self._generate_speech)
         actions.addStretch()
+        actions.addWidget(play)
         actions.addWidget(preview)
         actions.addWidget(generate)
         c.addLayout(actions)
@@ -142,7 +151,15 @@ class MainWindow(QMainWindow):
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate Speech")
         self.preview_button.setEnabled(True)
+        self.play_button.setEnabled(True)
         QMessageBox.information(self, "Voice Clone Studio", f"Speech generated successfully.\n\n{path}")
+
+    def _play_generated_audio(self):
+        if not self.generated_audio or not Path(self.generated_audio).is_file():
+            QMessageBox.information(self, "Generated Audio", "Generate speech before playback.")
+            return
+        self.player.setSource(QUrl.fromLocalFile(str(Path(self.generated_audio).resolve())))
+        self.player.play()
 
     def _save_generated_audio(self):
         if not self.generated_audio or not Path(self.generated_audio).is_file():
