@@ -169,9 +169,20 @@ class MainWindow(QMainWindow):
         self.generate_button.setText("Generating…")
         self.worker = GenerateWorker(text, self.reference_audio, output, allow_model_download=True)
         self.worker.finished_audio.connect(self._generation_finished)
+        self.worker.finished.connect(self._generation_worker_finished)
         self.worker.status.connect(self.generate_button.setText)
         self.worker.failed.connect(self._generation_failed)
         self.worker.start()
+
+    def _generation_worker_finished(self):
+        self.worker = None
+
+    def closeEvent(self, event):
+        if self.worker and self.worker.isRunning():
+            QMessageBox.information(self, "Voice Clone Studio", "Speech generation is still running. Wait for it to finish before closing.")
+            event.ignore()
+            return
+        event.accept()
 
     def _generation_finished(self, path):
         try:
