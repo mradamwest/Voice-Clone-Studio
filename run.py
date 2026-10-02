@@ -21,9 +21,7 @@ def _engine_self_test() -> int:
     mark("torch")
     import torchaudio
     mark("torchaudio")
-    # Import the exact module Generate Speech uses. Avoid package-level
-    # `import chatterbox`, which eagerly imports optional engine variants.
-    from chatterbox.mtl_tts import ChatterboxMultilingualTTS
+    # Use the same isolated loader as Generate Speech.\n    from voice_clone_studio.core.chatterbox_runtime import load_multilingual_tts_class\n    ChatterboxMultilingualTTS = load_multilingual_tts_class()
     mark("mtl_tts")
     assert torch and torchaudio and ChatterboxMultilingualTTS
     mark("success")
