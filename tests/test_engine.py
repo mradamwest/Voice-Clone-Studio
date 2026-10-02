@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, verify_generated_audio
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, first_run_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, verify_generated_audio
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -180,3 +180,11 @@ def test_verify_generated_audio_requires_nonempty_wav(tmp_path):
     empty = tmp_path / "empty.wav"; empty.write_bytes(b"")
     with pytest.raises(RuntimeError, match="empty"):
         verify_generated_audio(empty)
+
+
+def test_voice_first_run_status_reports_model_download(monkeypatch):
+    monkeypatch.setattr("voice_clone_studio.core.engine.engine_status", lambda device=None: {"available": True})
+    monkeypatch.setattr("voice_clone_studio.core.engine.model_cache_status", lambda: {"directory": "cache", "files": (), "bytes": 0, "exists": False})
+    status = first_run_status()
+    assert status["model_cached"] is False
+    assert status["requires_model_download"] is True
