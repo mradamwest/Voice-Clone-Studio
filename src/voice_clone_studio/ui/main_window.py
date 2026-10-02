@@ -15,11 +15,12 @@ class GenerateWorker(QThread):
     failed = Signal(str)
     status = Signal(str)
 
-    def __init__(self, text, reference_audio, output, allow_model_download=False):
+    def __init__(self, text, reference_audio, output, language_id="en", allow_model_download=False):
         super().__init__()
         self.text = text
         self.reference_audio = reference_audio
         self.output = output
+        self.language_id = language_id
         self.allow_model_download = allow_model_download
 
     def run(self):
@@ -27,7 +28,7 @@ class GenerateWorker(QThread):
             self.status.emit("Preparing voice model…")
             generation_preflight(self.text, self.reference_audio, self.output, allow_model_download=self.allow_model_download)
             self.status.emit("Generating speech…")
-            path = VoiceEngine().generate(self.text, self.reference_audio, self.output)
+            path = VoiceEngine().generate(self.text, self.reference_audio, self.output, language_id=self.language_id)
             self.finished_audio.emit(str(path))
         except Exception as exc:
             self.failed.emit(str(exc))
@@ -96,6 +97,12 @@ class MainWindow(QMainWindow):
         editor.setPlaceholderText("Type or paste the text you want to generate...")
         editor.setMinimumHeight(190)
         c.addWidget(editor)
+        language_row = QHBoxLayout()
+        language_row.addWidget(QLabel("Language"))
+        self.language_combo = QComboBox()
+        self.language_combo.addItems(["English (en)", "Arabic (ar)", "Danish (da)", "German (de)", "Greek (el)", "Spanish (es)", "Finnish (fi)", "French (fr)", "Hebrew (he)", "Hindi (hi)", "Italian (it)", "Japanese (ja)", "Korean (ko)", "Malay (ms)", "Dutch (nl)", "Norwegian (no)", "Polish (pl)", "Portuguese (pt)", "Russian (ru)", "Swedish (sv)", "Swahili (sw)", "Turkish (tr)", "Chinese (zh)"])
+        language_row.addWidget(self.language_combo, 1)
+        c.addLayout(language_row)
 
         controls = QHBoxLayout()
         controls.addWidget(QLabel("Stability"))
@@ -167,7 +174,8 @@ class MainWindow(QMainWindow):
         self.play_button.setEnabled(False)
         self.generate_button.setEnabled(False)
         self.generate_button.setText("Generating…")
-        self.worker = GenerateWorker(text, self.reference_audio, output, allow_model_download=allow_model_download)
+        language_id = self.language_combo.currentText().rsplit("(", 1)[-1].rstrip(")")
+        self.worker = GenerateWorker(text, self.reference_audio, output, language_id=language_id, allow_model_download=allow_model_download)
         self.worker.finished_audio.connect(self._generation_finished)
         self.worker.finished.connect(self._generation_worker_finished)
         self.worker.status.connect(self.generate_button.setText)
