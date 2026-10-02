@@ -35,6 +35,15 @@ jobs:
         run: |
           $p = Start-Process ".\dist\Voice Clone Studio\Voice Clone Studio.exe" -ArgumentList "--app-import-self-test" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Packaged startup self-test failed with exit code $($p.ExitCode)" }
+      - name: Verify packaged Chatterbox engine imports
+        shell: powershell
+        run: |
+          $p = Start-Process ".\dist\Voice Clone Studio\Voice Clone Studio.exe" -ArgumentList "--engine-import-self-test" -PassThru
+          if (-not $p.WaitForExit(60000)) {
+            taskkill /PID $p.Id /T /F | Out-Null
+            throw "Packaged Chatterbox engine import self-test timed out after 60 seconds"
+          }
+          if ($p.ExitCode -ne 0) { throw "Packaged Chatterbox engine import self-test failed with exit code $($p.ExitCode)" }
       - name: Build Windows installer
         shell: powershell
         run: |
