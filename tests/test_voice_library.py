@@ -25,3 +25,11 @@ def test_corrupt_index_does_not_crash(tmp_path):
     root.mkdir()
     (root / "voices.json").write_text("{broken", encoding="utf-8")
     assert VoiceLibrary(root).list() == []
+
+
+def test_voice_name_length_limit(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"x")
+    with pytest.raises(ValueError, match="80"):
+        library.add("x" * 81, str(ref))
