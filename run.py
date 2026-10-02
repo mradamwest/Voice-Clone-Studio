@@ -10,24 +10,22 @@ def _self_test() -> int:
     return 0
 
 def _engine_self_test() -> int:
-    # Import the same lazy modules Generate Speech needs. Emit progress markers
-    # so CI can distinguish a slow import from a missing/broken packaged module.
     marker = os.environ.get("VOICE_ENGINE_SELF_TEST_MARKER")
     def mark(name: str) -> None:
         if marker:
             with open(marker, "a", encoding="utf-8") as handle:
-                handle.write(name + "\\n")
+                handle.write(name + "\n")
                 handle.flush()
     mark("start")
     import torch
     mark("torch")
     import torchaudio
     mark("torchaudio")
-    import chatterbox
-    mark("chatterbox")
+    # Import the exact module Generate Speech uses. Avoid package-level
+    # `import chatterbox`, which eagerly imports optional engine variants.
     from chatterbox.mtl_tts import ChatterboxMultilingualTTS
     mark("mtl_tts")
-    assert torch and torchaudio and chatterbox and ChatterboxMultilingualTTS
+    assert torch and torchaudio and ChatterboxMultilingualTTS
     mark("success")
     os._exit(0)
 
