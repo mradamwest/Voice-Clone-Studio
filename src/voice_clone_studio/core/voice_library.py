@@ -71,3 +71,21 @@ class VoiceLibrary:
             return False
         self._save(remaining)
         return True
+
+
+    def rename(self, profile_id: str, new_name: str) -> VoiceProfile:
+        """Rename a saved profile without touching its reference recording."""
+        clean_name = new_name.strip()
+        if not clean_name:
+            raise ValueError("Voice name cannot be empty.")
+        if len(clean_name) > 80:
+            raise ValueError("Voice name cannot exceed 80 characters.")
+        profiles = self.list()
+        target = next((p for p in profiles if p.id == profile_id), None)
+        if target is None:
+            raise KeyError(profile_id)
+        if any(p.id != profile_id and p.name.casefold() == clean_name.casefold() for p in profiles):
+            raise ValueError("A voice with this name already exists.")
+        updated = VoiceProfile(target.id, clean_name, target.reference_audio, target.language)
+        self._save([updated if p.id == profile_id else p for p in profiles])
+        return updated
