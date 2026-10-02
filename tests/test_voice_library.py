@@ -73,3 +73,13 @@ def test_get_profile_by_stable_id(tmp_path):
     assert library.get(profile.id) == profile
     with pytest.raises(KeyError):
         library.get("missing-id")
+
+
+def test_validate_references_reports_missing_source(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"audio")
+    profile = library.add("Reference Check", str(ref))
+    ref.unlink()
+    issues = library.validate_references()
+    assert issues[profile.id] == "Reference audio file is missing."
