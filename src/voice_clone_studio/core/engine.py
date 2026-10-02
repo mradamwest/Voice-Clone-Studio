@@ -97,3 +97,14 @@ def validate_generation_request(text: str, reference_audio: str, output: str) ->
     if out.suffix.lower() != ".wav":
         raise ValueError("Voice output must be a WAV file.")
     return clean_text, reference, out
+
+
+def model_cache_status() -> dict[str, object]:
+    """Report the local Torch model cache without downloading or loading model weights."""
+    import os
+    default_root = Path.home() / ".cache" / "torch" / "hub" / "checkpoints"
+    torch_home = os.environ.get("TORCH_HOME")
+    root = (Path(torch_home).expanduser() / "hub" / "checkpoints") if torch_home else default_root
+    root = root.resolve()
+    files = tuple(sorted((p for p in root.glob("*") if p.is_file()), key=lambda p: p.name.casefold())) if root.is_dir() else ()
+    return {"directory": str(root), "exists": root.is_dir(), "files": tuple(p.name for p in files), "bytes": sum(p.stat().st_size for p in files)}
