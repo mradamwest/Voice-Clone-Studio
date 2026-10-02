@@ -61,3 +61,13 @@ class VoiceLibrary:
         voices.append(profile)
         self._save(voices)
         return profile
+
+
+    def remove(self, profile_id: str) -> bool:
+        """Remove a saved profile record without deleting the user's source audio."""
+        profiles = self.list()
+        remaining = [profile for profile in profiles if profile.id != profile_id]
+        if len(remaining) == len(profiles):
+            return False
+        self._save(remaining)
+        return True
