@@ -142,3 +142,13 @@ def test_validate_generation_request_normalizes_paths(tmp_path):
     assert text == "hello"
     assert reference == ref.resolve()
     assert out == (tmp_path / "out.wav").resolve()
+
+
+def test_generate_uses_shared_request_validation(tmp_path):
+    ref = tmp_path / "voice.txt"; ref.write_bytes(b"x")
+    try:
+        VoiceEngine("cpu").generate("hello", str(ref), str(tmp_path / "out.wav"))
+    except ValueError as exc:
+        assert "Unsupported reference audio format" in str(exc)
+    else:
+        raise AssertionError("shared validation must reject unsupported reference audio")
