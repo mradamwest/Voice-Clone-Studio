@@ -94,3 +94,13 @@ def test_update_language_preserves_voice_source(tmp_path):
     assert updated.language == "en"
     assert Path(updated.reference_audio) == ref.resolve()
     assert ref.exists()
+
+
+def test_replace_reference_preserves_old_and_new_audio(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    old = tmp_path / "old.wav"; old.write_bytes(b"old")
+    new = tmp_path / "new.wav"; new.write_bytes(b"new")
+    profile = library.add("Replace Test", str(old))
+    updated = library.replace_reference(profile.id, str(new))
+    assert Path(updated.reference_audio) == new.resolve()
+    assert old.exists() and new.exists()
