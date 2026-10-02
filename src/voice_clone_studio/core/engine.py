@@ -62,6 +62,15 @@ class VoiceEngine:
         if wav is None or not hasattr(wav, "numel") or wav.numel() == 0:
             raise RuntimeError("Voice engine returned no audio.")
         import torchaudio
+        # Chatterbox can occasionally return a valid but nearly inaudible waveform.
+        # Raise only abnormally quiet output; leave normal model output untouched.
+        try:
+            peak = float(wav.detach().abs().max().item())
+        except (AttributeError, TypeError, ValueError):
+            peak = None
+        if peak is not None and 0.0 < peak < 0.05:
+            target_peak = 0.85
+            wav = wav * (target_peak / peak)
         if out.exists() and out.is_dir():
             raise ValueError("Voice output path points to a directory.")
         out.parent.mkdir(parents=True, exist_ok=True)
