@@ -49,25 +49,14 @@ class VoiceEngine:
 
     def generate(self, text: str, reference_audio: str, output: str) -> Path:
         """Generate cloned speech without loading the model until validation passes."""
-        if not text.strip():
+        clean_text, reference, out = validate_generation_request(text, reference_audio, output)
+        if not clean_text:
             raise ValueError("Text cannot be empty.")
-        reference = Path(reference_audio).expanduser().resolve()
-        if reference.suffix.lower() not in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}:
-            raise ValueError("Unsupported reference audio format.")
-        if not reference.is_file():
-            raise FileNotFoundError(reference)
-        if reference.stat().st_size == 0:
-            raise ValueError("Reference audio file is empty.")
         model = self._load()
-        wav = model.generate(text.strip(), audio_prompt_path=str(reference))
+        wav = model.generate(clean_text, audio_prompt_path=str(reference))
         if wav is None or not hasattr(wav, "numel") or wav.numel() == 0:
             raise RuntimeError("Voice engine returned no audio.")
         import torchaudio
-        out = Path(output).expanduser().resolve()
-        if out == reference:
-            raise ValueError("Output file cannot overwrite the reference audio.")
-        if out.suffix.lower() != ".wav":
-            raise ValueError("Voice output must be a WAV file.")
         if out.exists() and out.is_dir():
             raise ValueError("Voice output path points to a directory.")
         out.parent.mkdir(parents=True, exist_ok=True)
