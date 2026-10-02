@@ -123,3 +123,21 @@ class VoiceLibrary:
         updated = VoiceProfile(target.id, target.name, target.reference_audio, clean)
         self._save([updated if p.id == profile_id else p for p in profiles])
         return updated
+
+
+    def replace_reference(self, profile_id: str, reference_audio: str) -> VoiceProfile:
+        """Point a saved voice at a new validated reference without deleting either source file."""
+        reference = Path(reference_audio).expanduser().resolve()
+        if reference.suffix.lower() not in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}:
+            raise ValueError("Unsupported reference audio format.")
+        if not reference.is_file():
+            raise FileNotFoundError(reference)
+        if reference.stat().st_size == 0:
+            raise ValueError("Reference audio file is empty.")
+        profiles = self.list()
+        target = next((p for p in profiles if p.id == profile_id), None)
+        if target is None:
+            raise KeyError(profile_id)
+        updated = VoiceProfile(target.id, target.name, str(reference), target.language)
+        self._save([updated if p.id == profile_id else p for p in profiles])
+        return updated
