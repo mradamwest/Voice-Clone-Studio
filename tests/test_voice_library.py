@@ -104,3 +104,11 @@ def test_replace_reference_preserves_old_and_new_audio(tmp_path):
     updated = library.replace_reference(profile.id, str(new))
     assert Path(updated.reference_audio) == new.resolve()
     assert old.exists() and new.exists()
+
+
+def test_voice_names_are_deterministic(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    a = tmp_path / "a.wav"; a.write_bytes(b"a")
+    b = tmp_path / "b.wav"; b.write_bytes(b"b")
+    library.add("Zulu", str(a)); library.add("alpha", str(b))
+    assert library.names() == ("alpha", "Zulu")
