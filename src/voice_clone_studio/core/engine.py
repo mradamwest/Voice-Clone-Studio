@@ -52,6 +52,8 @@ class VoiceEngine:
         if not text.strip():
             raise ValueError("Text cannot be empty.")
         reference = Path(reference_audio).expanduser().resolve()
+        if reference.suffix.lower() not in {".wav", ".mp3", ".flac", ".ogg", ".m4a"}:
+            raise ValueError("Unsupported reference audio format.")
         if not reference.is_file():
             raise FileNotFoundError(reference)
         if reference.stat().st_size == 0:
