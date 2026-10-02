@@ -1,3 +1,4 @@
+from pathlib import Path
 import pytest
 
 from voice_clone_studio.core.engine import VoiceEngine, engine_status, ensure_voice_ready, first_run_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, generation_preflight, verify_generated_audio
