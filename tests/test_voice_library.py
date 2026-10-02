@@ -41,3 +41,14 @@ def test_voice_library_rejects_unsupported_reference_format(tmp_path):
     ref.write_bytes(b"x")
     with pytest.raises(ValueError, match="Unsupported reference audio format"):
         library.add("Test Voice", str(ref))
+
+
+def test_remove_profile_preserves_reference_audio(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"audio")
+    profile = library.add("Keep Source", str(ref))
+    assert library.remove(profile.id) is True
+    assert ref.exists()
+    assert library.list() == []
+    assert library.remove(profile.id) is False
