@@ -3,7 +3,7 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 import tempfile
 
-from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request
+from voice_clone_studio.core.engine import VoiceEngine, validate_generation_request, reference_audio_status
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
@@ -127,8 +127,12 @@ class MainWindow(QMainWindow):
     def _choose_reference(self, button):
         path, _ = QFileDialog.getOpenFileName(self, "Choose Reference Voice", "", "Audio (*.wav *.mp3 *.flac *.m4a)")
         if path:
+            status = reference_audio_status(path)
+            if not status["ready"]:
+                QMessageBox.warning(self, "Reference Voice", "The selected recording is not ready for cloning.")
+                return
             self.reference_audio = path
-            button.setText("Reference Voice     •     Ready")
+            button.setText(f"Reference Voice     •     Ready ({status['bytes'] / 1024:.0f} KB)")
 
     def _generate_speech(self):
         if not self.reference_audio:
