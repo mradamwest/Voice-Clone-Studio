@@ -68,6 +68,8 @@ class VoiceEngine:
             raise ValueError("Output file cannot overwrite the reference audio.")
         if out.suffix.lower() != ".wav":
             raise ValueError("Voice output must be a WAV file.")
+        if out.exists() and out.is_dir():
+            raise ValueError("Voice output path points to a directory.")
         out.parent.mkdir(parents=True, exist_ok=True)
         sample_rate = getattr(model, "sr", None)
         if not isinstance(sample_rate, int) or sample_rate <= 0:
