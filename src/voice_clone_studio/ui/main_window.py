@@ -14,14 +14,16 @@ class GenerateWorker(QThread):
     finished_audio = Signal(str)
     failed = Signal(str)
 
-    def __init__(self, text, reference_audio, output):
+    def __init__(self, text, reference_audio, output, allow_model_download=False):
         super().__init__()
         self.text = text
         self.reference_audio = reference_audio
         self.output = output
+        self.allow_model_download = allow_model_download
 
     def run(self):
         try:
+            generation_preflight(self.text, self.reference_audio, self.output, allow_model_download=self.allow_model_download)
             path = VoiceEngine().generate(self.text, self.reference_audio, self.output)
             self.finished_audio.emit(str(path))
         except Exception as exc:
@@ -153,7 +155,7 @@ class MainWindow(QMainWindow):
         self.play_button.setEnabled(False)
         self.generate_button.setEnabled(False)
         self.generate_button.setText("Generating…")
-        self.worker = GenerateWorker(text, self.reference_audio, output)
+        self.worker = GenerateWorker(text, self.reference_audio, output, allow_model_download=True)
         self.worker.finished_audio.connect(self._generation_finished)
         self.worker.failed.connect(self._generation_failed)
         self.worker.start()
