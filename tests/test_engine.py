@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine
+from voice_clone_studio.core.engine import VoiceEngine, engine_status
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -127,3 +127,10 @@ def test_invalid_sample_rate_is_rejected(tmp_path):
         assert "sample rate" in str(exc).lower()
     else:
         raise AssertionError("invalid sample rate must be rejected")
+
+
+def test_engine_status_does_not_load_model():
+    status = engine_status("cpu")
+    assert status["device"] == "cpu"
+    assert status["model_loaded"] is False
+    assert isinstance(status["available"], bool)
