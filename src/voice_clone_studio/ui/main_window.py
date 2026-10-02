@@ -3,6 +3,8 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 
 from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, reference_audio_status, generation_output_path, verify_generated_audio
+from voice_clone_studio.core.voice_library import VoiceLibrary
+from voice_clone_studio.core.generated_library import GeneratedVoiceLibrary
 
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton,
@@ -41,6 +43,9 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1100, 700)
         self.setStyleSheet(self._style())
         self.reference_audio = ""
+        self.voice_library = VoiceLibrary()
+        self.generated_library = GeneratedVoiceLibrary()
+        self.active_voice_name = "Reference Voice"
         self.worker = None
         self.generated_audio = ""
         self.audio_output = QAudioOutput(self)
@@ -176,6 +181,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Reference Voice", "The dropped recording is not ready for cloning.")
             return
         self.reference_audio = path
+        self.active_voice_name = Path(path).stem
         self.reference_button.setText(f"Reference Voice     •     Ready ({status['bytes'] / 1024:.0f} KB)")
         self.my_voice_source.setChecked(True)
         event.acceptProposedAction()
@@ -188,6 +194,7 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Reference Voice", "The selected recording is not ready for cloning.")
                 return
             self.reference_audio = path
+            self.active_voice_name = Path(path).stem
             button.setText(f"Reference Voice     •     Ready ({status['bytes'] / 1024:.0f} KB)")
 
     def _generate_speech(self):
@@ -250,6 +257,13 @@ class MainWindow(QMainWindow):
             self._generation_failed(str(exc))
             return
         self.generated_audio = path
+        language_id = self.language_combo.currentText().rsplit("(", 1)[-1].rstrip(")")
+        try:
+            saved = self.generated_library.add(path, self.active_voice_name, language_id)
+            self.generated_audio = saved.audio_path
+        except Exception as exc:
+            self._generation_failed(f"Speech was generated, but could not be added to Generated Voices: {exc}")
+            return
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate Speech")
         self.preview_button.setEnabled(True)
