@@ -52,3 +52,14 @@ def test_remove_profile_preserves_reference_audio(tmp_path):
     assert ref.exists()
     assert library.list() == []
     assert library.remove(profile.id) is False
+
+
+def test_rename_profile_preserves_reference_audio(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.wav"
+    ref.write_bytes(b"audio")
+    profile = library.add("Original", str(ref))
+    renamed = library.rename(profile.id, "Renamed")
+    assert renamed.name == "Renamed"
+    assert Path(renamed.reference_audio) == ref.resolve()
+    assert ref.exists()
