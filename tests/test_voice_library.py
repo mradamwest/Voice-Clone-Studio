@@ -124,3 +124,16 @@ def test_find_voice_by_name_is_case_insensitive(tmp_path):
     profile = library.add("Narrator", str(ref))
     assert library.find_by_name(" narrator ") == profile
     assert library.find_by_name("missing") is None
+
+
+def test_saved_voice_owns_reference_copy(tmp_path):
+    source = tmp_path / "source.wav"
+    source.write_bytes(b"voice-data")
+    library = VoiceLibrary(tmp_path / "library")
+    profile = library.add("Durable Voice", str(source), "en")
+    saved = Path(profile.reference_audio)
+    assert saved.parent == library.references
+    assert saved.read_bytes() == b"voice-data"
+    source.unlink()
+    assert saved.is_file()
+    assert library.validate_references() == {}
