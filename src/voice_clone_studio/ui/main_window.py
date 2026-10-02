@@ -191,6 +191,9 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Voice Clone Studio", f"Audio saved successfully.\n\n{destination}")
 
     def _generation_failed(self, message):
+        self.generated_audio = ""
+        self.preview_button.setEnabled(False)
+        self.play_button.setEnabled(False)
         self.generate_button.setEnabled(True)
         self.generate_button.setText("Generate Speech")
         QMessageBox.critical(self, "Generation Failed", message)
