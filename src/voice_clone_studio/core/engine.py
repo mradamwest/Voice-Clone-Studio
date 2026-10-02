@@ -17,6 +17,8 @@ class VoiceEngine:
 
     def _best_device(self) -> str:
         if self.device:
+            if self.device not in {"cpu", "cuda"}:
+                raise ValueError(f"Unsupported device: {self.device}")
             return self.device
         try:
             import torch
@@ -57,7 +59,9 @@ class VoiceEngine:
         model = self._load()
         wav = model.generate(text.strip(), audio_prompt_path=str(reference))
         import torchaudio
-        out = Path(output)
+        out = Path(output).expanduser().resolve()
+        if out.suffix.lower() != ".wav":
+            raise ValueError("Voice output must be a WAV file.")
         out.parent.mkdir(parents=True, exist_ok=True)
         torchaudio.save(str(out), wav, model.sr)
         return out
