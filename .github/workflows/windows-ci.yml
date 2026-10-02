@@ -73,8 +73,8 @@ jobs:
         run: |
           $installer = (Resolve-Path ".\\dist-installer\\Voice_Clone_Studio_Setup_0.1.0.exe").Path
           $installDir = Join-Path $env:RUNNER_TEMP "VoiceCloneStudioInstalled"
-          $desktopShortcut = Join-Path ([Environment]::GetFolderPath("Desktop")) "Voice Clone Studio.lnk"
-          $startShortcut = Join-Path $env:APPDATA "Microsoft\\Windows\\Start Menu\\Programs\\Voice Clone Studio.lnk"
+          $desktopShortcut = Join-Path $env:PUBLIC "Desktop\\Voice Clone Studio.lnk"
+          $startShortcut = Join-Path $env:ProgramData "Microsoft\\Windows\\Start Menu\\Programs\\Voice Clone Studio.lnk"
           $p = Start-Process $installer -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$installDir" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Silent install failed with exit code $($p.ExitCode)" }
           $exe = Join-Path $installDir "Voice Clone Studio.exe"
