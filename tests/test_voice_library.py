@@ -33,3 +33,11 @@ def test_voice_name_length_limit(tmp_path):
     ref.write_bytes(b"x")
     with pytest.raises(ValueError, match="80"):
         library.add("x" * 81, str(ref))
+
+
+def test_voice_library_rejects_unsupported_reference_format(tmp_path):
+    library = VoiceLibrary(tmp_path)
+    ref = tmp_path / "voice.txt"
+    ref.write_bytes(b"x")
+    with pytest.raises(ValueError, match="Unsupported reference audio format"):
+        library.add("Test Voice", str(ref))
