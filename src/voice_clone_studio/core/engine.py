@@ -135,3 +135,16 @@ def generation_output_path(root: str | Path, filename: str = "voice-clone.wav") 
         if not alternative.exists():
             return alternative
         index += 1
+
+
+def verify_generated_audio(path: str | Path) -> dict[str, object]:
+    """Verify a generated WAV before the UI enables playback/export."""
+    audio = Path(path).expanduser().resolve()
+    if audio.suffix.lower() != ".wav":
+        raise ValueError("Generated audio must be a WAV file.")
+    if not audio.is_file():
+        raise FileNotFoundError(audio)
+    size = audio.stat().st_size
+    if size <= 0:
+        raise RuntimeError("Generated audio file is empty.")
+    return {"path": str(audio), "bytes": size, "ready": True}
