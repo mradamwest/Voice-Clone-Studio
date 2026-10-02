@@ -29,7 +29,20 @@ class VoiceEngine:
             if not self.available:
                 raise RuntimeError("Chatterbox multilingual engine is not installed.")
             from chatterbox.mtl_tts import ChatterboxMultilingualTTS
-            self._model = ChatterboxMultilingualTTS.from_pretrained(device=self._best_device(), t3_model="v3")
+            try:
+                # Current upstream V3 documentation accepts t3_model="v3".
+                self._model = ChatterboxMultilingualTTS.from_pretrained(
+                    device=self._best_device(), t3_model="v3"
+                )
+            except TypeError as exc:
+                # Some published Chatterbox builds have temporarily shipped
+                # without the t3_model keyword. Fall back without hiding any
+                # other initialization failure.
+                if "t3_model" not in str(exc):
+                    raise
+                self._model = ChatterboxMultilingualTTS.from_pretrained(
+                    device=self._best_device()
+                )
         return self._model
 
     def generate(self, text: str, reference_audio: str, output: str) -> Path:
