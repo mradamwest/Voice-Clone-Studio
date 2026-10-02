@@ -148,7 +148,11 @@ class VoiceLibrary:
         target = next((p for p in profiles if p.id == profile_id), None)
         if target is None:
             raise KeyError(profile_id)
-        updated = VoiceProfile(target.id, target.name, str(reference), target.language)
+        owned_reference = self.references / f"{target.id}{reference.suffix.lower()}"
+        temp_reference = self.references / f"{target.id}.replacement{reference.suffix.lower()}"
+        shutil.copy2(reference, temp_reference)
+        os.replace(temp_reference, owned_reference)
+        updated = VoiceProfile(target.id, target.name, str(owned_reference), target.language)
         self._save([updated if p.id == profile_id else p for p in profiles])
         return updated
 
