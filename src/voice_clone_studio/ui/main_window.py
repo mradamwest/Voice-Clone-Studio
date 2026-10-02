@@ -1,7 +1,6 @@
-from PySide6.QtCore import Qt, QThread, Signal, QUrl
+from PySide6.QtCore import Qt, QThread, Signal, QUrl, QStandardPaths
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
-import tempfile
 
 from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, reference_audio_status, generation_output_path, verify_generated_audio
 
@@ -154,7 +153,10 @@ class MainWindow(QMainWindow):
         if not text:
             QMessageBox.information(self, "Text Required", "Enter text to generate.")
             return
-        output = str(generation_output_path(tempfile.gettempdir(), "voice-clone-studio-output.wav"))
+        music_dir = QStandardPaths.writableLocation(QStandardPaths.MusicLocation) or str(Path.home() / "Music")
+        output_dir = Path(music_dir) / "Voice Clone Studio"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output = str(generation_output_path(output_dir, "voice-clone-studio-output.wav"))
         allow_model_download = False
         try:
             generation_preflight(text, self.reference_audio, output, allow_model_download=False)
@@ -203,7 +205,7 @@ class MainWindow(QMainWindow):
         self.generate_button.setText("Generate Speech")
         self.preview_button.setEnabled(True)
         self.play_button.setEnabled(True)
-        QMessageBox.information(self, "Voice Clone Studio", f"Speech generated successfully.\n\n{path}")
+        QMessageBox.information(self, "Voice Clone Studio", f"Speech generated successfully.\n\nSaved to:\n{path}")
 
     def _play_generated_audio(self):
         if not self.generated_audio or not Path(self.generated_audio).is_file():
