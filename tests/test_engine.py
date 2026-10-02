@@ -1,4 +1,4 @@
-from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, verify_generated_audio
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -172,3 +172,11 @@ def test_reference_audio_status_reports_readiness(tmp_path):
 def test_generation_output_path_never_overwrites(tmp_path):
     first = tmp_path / "voice-clone.wav"; first.write_bytes(b"existing")
     assert generation_output_path(tmp_path) == tmp_path / "voice-clone_2.wav"
+
+
+def test_verify_generated_audio_requires_nonempty_wav(tmp_path):
+    wav = tmp_path / "generated.wav"; wav.write_bytes(b"RIFFdata")
+    assert verify_generated_audio(wav)["ready"] is True
+    empty = tmp_path / "empty.wav"; empty.write_bytes(b"")
+    with pytest.raises(RuntimeError, match="empty"):
+        verify_generated_audio(empty)
