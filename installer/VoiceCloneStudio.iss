@@ -18,6 +18,8 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 Uninstallable=yes
 CreateUninstallRegKey=yes
+CloseApplications=yes
+RestartApplications=no
 
 [Files]
 Source: "..\\dist\\Voice Clone Studio\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
