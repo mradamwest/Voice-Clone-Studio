@@ -91,9 +91,20 @@ jobs:
           if (!(Test-Path $uninstaller)) { throw "Uninstaller executable missing" }
           $uninstallKey = Get-ChildItem "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall","HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall","HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall" -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).DisplayName -eq "Voice Clone Studio" }
           if (-not $uninstallKey) { throw "Windows uninstall registration missing after install" }
+          $userDataRoot = Join-Path $env:LOCALAPPDATA "Voice Clone Studio"
+          $myVoicesDir = Join-Path $userDataRoot "My Voices"
+          $generatedVoicesDir = Join-Path $userDataRoot "Generated Voices"
+          New-Item -ItemType Directory -Force -Path $myVoicesDir,$generatedVoicesDir | Out-Null
+          $myVoiceSentinel = Join-Path $myVoicesDir "uninstall-preserve-test.wav"
+          $generatedSentinel = Join-Path $generatedVoicesDir "uninstall-preserve-test.wav"
+          Set-Content -Path $myVoiceSentinel -Value "preserve-my-voice"
+          Set-Content -Path $generatedSentinel -Value "preserve-generated-voice"
           $p = Start-Process $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Silent uninstall failed with exit code $($p.ExitCode)" }
           if (Test-Path $exe) { throw "Application executable remains after uninstall" }
+          if (!(Test-Path $myVoiceSentinel)) { throw "Uninstall removed My Voices user data" }
+          if (!(Test-Path $generatedSentinel)) { throw "Uninstall removed Generated Voices user data" }
+          Remove-Item $myVoiceSentinel,$generatedSentinel -Force
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
