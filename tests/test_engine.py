@@ -78,3 +78,14 @@ def test_reference_cannot_be_overwritten(tmp_path):
         assert "overwrite" in str(exc).lower()
     else:
         raise AssertionError("reference overwrite must be rejected")
+
+
+def test_unsupported_reference_format_is_rejected_before_model_load(tmp_path):
+    ref = tmp_path / "voice.txt"
+    ref.write_bytes(b"x")
+    try:
+        VoiceEngine("cpu").generate("hello", str(ref), str(tmp_path / "out.wav"))
+    except ValueError as exc:
+        assert "Unsupported reference audio format" in str(exc)
+    else:
+        raise AssertionError("unsupported reference format must be rejected")
