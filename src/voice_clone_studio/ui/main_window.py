@@ -148,13 +148,12 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Text Required", "Enter text to generate.")
             return
         output = str(generation_output_path(tempfile.gettempdir(), "voice-clone-studio-output.wav"))
+        allow_model_download = False
         try:
             generation_preflight(text, self.reference_audio, output, allow_model_download=False)
-        except (ValueError, FileNotFoundError, RuntimeError) as exc:
+        except (ValueError, FileNotFoundError) as exc:
             QMessageBox.warning(self, "Cannot Generate", str(exc))
             return
-        try:
-            readiness = generation_preflight(text, self.reference_audio, output, allow_model_download=False)
         except RuntimeError as exc:
             if "download approval" not in str(exc).lower():
                 QMessageBox.warning(self, "Cannot Generate", str(exc)); return
@@ -162,12 +161,13 @@ class MainWindow(QMainWindow):
             if answer != QMessageBox.Yes:
                 return
             generation_preflight(text, self.reference_audio, output, allow_model_download=True)
+            allow_model_download = True
         self.generated_audio = ""
         self.preview_button.setEnabled(False)
         self.play_button.setEnabled(False)
         self.generate_button.setEnabled(False)
         self.generate_button.setText("Generating…")
-        self.worker = GenerateWorker(text, self.reference_audio, output, allow_model_download=True)
+        self.worker = GenerateWorker(text, self.reference_audio, output, allow_model_download=allow_model_download)
         self.worker.finished_audio.connect(self._generation_finished)
         self.worker.finished.connect(self._generation_worker_finished)
         self.worker.status.connect(self.generate_button.setText)
