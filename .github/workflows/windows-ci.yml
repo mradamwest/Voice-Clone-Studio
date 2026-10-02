@@ -68,6 +68,28 @@ jobs:
           if ($iss -notmatch "\{autodesktop\}") { throw "Desktop shortcut missing from installer" }
           if ($iss -notmatch "Uninstallable=yes") { throw "Uninstaller is not enabled" }
           if ($iss -notmatch "CreateUninstallRegKey=yes") { throw "Windows uninstall registration missing" }
+      - name: Validate installed application and uninstaller
+        shell: powershell
+        run: |
+          $installer = (Resolve-Path ".\\dist-installer\\Voice_Clone_Studio_Setup_0.1.0.exe").Path
+          $installDir = Join-Path $env:RUNNER_TEMP "VoiceCloneStudioInstalled"
+          $desktopShortcut = Join-Path ([Environment]::GetFolderPath("Desktop")) "Voice Clone Studio.lnk"
+          $startShortcut = Join-Path $env:APPDATA "Microsoft\\Windows\\Start Menu\\Programs\\Voice Clone Studio.lnk"
+          $p = Start-Process $installer -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$installDir" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Silent install failed with exit code $($p.ExitCode)" }
+          $exe = Join-Path $installDir "Voice Clone Studio.exe"
+          if (!(Test-Path $exe)) { throw "Installed executable missing" }
+          $p = Start-Process $exe -ArgumentList "--app-import-self-test" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Installed app self-test failed with exit code $($p.ExitCode)" }
+          if (!(Test-Path $desktopShortcut)) { throw "Desktop shortcut missing after install" }
+          if (!(Test-Path $startShortcut)) { throw "Start Menu shortcut missing after install" }
+          $uninstaller = Join-Path $installDir "unins000.exe"
+          if (!(Test-Path $uninstaller)) { throw "Uninstaller executable missing" }
+          $uninstallKey = Get-ChildItem "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall","HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall","HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall" -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).DisplayName -eq "Voice Clone Studio" }
+          if (-not $uninstallKey) { throw "Windows uninstall registration missing after install" }
+          $p = Start-Process $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Silent uninstall failed with exit code $($p.ExitCode)" }
+          if (Test-Path $exe) { throw "Application executable remains after uninstall" }
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
