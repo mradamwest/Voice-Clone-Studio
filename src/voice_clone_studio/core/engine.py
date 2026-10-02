@@ -67,5 +67,8 @@ class VoiceEngine:
         if out.suffix.lower() != ".wav":
             raise ValueError("Voice output must be a WAV file.")
         out.parent.mkdir(parents=True, exist_ok=True)
-        torchaudio.save(str(out), wav, model.sr)
+        sample_rate = getattr(model, "sr", None)
+        if not isinstance(sample_rate, int) or sample_rate <= 0:
+            raise RuntimeError("Voice engine returned an invalid sample rate.")
+        torchaudio.save(str(out), wav, sample_rate)
         return out
