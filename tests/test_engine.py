@@ -239,3 +239,41 @@ def test_arabic_generation_passes_ar_language_id(monkeypatch, tmp_path):
     engine.generate("مرحبا بكم", str(ref), str(out), language_id="AR")
     assert calls == [("مرحبا بكم", {"language_id": "ar", "audio_prompt_path": str(ref.resolve())})]
     assert out.is_file()
+
+
+def test_generate_normalizes_abnormally_quiet_audio(monkeypatch, tmp_path):
+    import torch
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    out = tmp_path / "quiet.wav"
+    engine = VoiceEngine("cpu")
+    class FakeModel:
+        sr = 24000
+        def generate(self, *args, **kwargs):
+            return torch.tensor([[0.0, 0.01, -0.02]], dtype=torch.float32)
+    engine._model = FakeModel()
+    captured = {}
+    def fake_save(path, wav, sr):
+        captured["peak"] = float(wav.abs().max().item())
+        Path(path).write_bytes(b"RIFFnormalized")
+    monkeypatch.setattr("torchaudio.save", fake_save)
+    engine.generate("hello", str(ref), str(out))
+    assert captured["peak"] == pytest.approx(0.85, abs=1e-5)
+
+
+def test_generate_leaves_normal_audio_level_unchanged(monkeypatch, tmp_path):
+    import torch
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    out = tmp_path / "normal.wav"
+    engine = VoiceEngine("cpu")
+    class FakeModel:
+        sr = 24000
+        def generate(self, *args, **kwargs):
+            return torch.tensor([[0.0, 0.2, -0.4]], dtype=torch.float32)
+    engine._model = FakeModel()
+    captured = {}
+    def fake_save(path, wav, sr):
+        captured["peak"] = float(wav.abs().max().item())
+        Path(path).write_bytes(b"RIFFnormal")
+    monkeypatch.setattr("torchaudio.save", fake_save)
+    engine.generate("hello", str(ref), str(out))
+    assert captured["peak"] == pytest.approx(0.4, abs=1e-5)
