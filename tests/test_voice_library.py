@@ -13,7 +13,8 @@ def test_voice_library_round_trip(tmp_path):
     assert len(voices) == 1
     assert voices[0].id == added.id
     assert voices[0].name == "Test Voice"
-    assert voices[0].reference_audio == str(ref)
+    assert Path(voices[0].reference_audio).parent == library.references
+    assert Path(voices[0].reference_audio).read_bytes() == b"audio"
 
 def test_voice_library_rejects_missing_reference(tmp_path):
     library = VoiceLibrary(tmp_path / "data")
@@ -65,7 +66,8 @@ def test_rename_profile_preserves_reference_audio(tmp_path):
     profile = library.add("Original", str(ref))
     renamed = library.rename(profile.id, "Renamed")
     assert renamed.name == "Renamed"
-    assert Path(renamed.reference_audio) == ref.resolve()
+    assert Path(renamed.reference_audio) == Path(profile.reference_audio)
+    assert Path(renamed.reference_audio).is_file()
     assert ref.exists()
 
 
@@ -84,7 +86,7 @@ def test_validate_references_reports_missing_source(tmp_path):
     ref = tmp_path / "voice.wav"
     ref.write_bytes(b"audio")
     profile = library.add("Reference Check", str(ref))
-    ref.unlink()
+    Path(profile.reference_audio).unlink()
     issues = library.validate_references()
     assert issues[profile.id] == "Reference audio file is missing."
 
@@ -96,7 +98,8 @@ def test_update_language_preserves_voice_source(tmp_path):
     profile = library.add("Language Test", str(ref))
     updated = library.update_language(profile.id, "en")
     assert updated.language == "en"
-    assert Path(updated.reference_audio) == ref.resolve()
+    assert Path(updated.reference_audio) == Path(profile.reference_audio)
+    assert Path(updated.reference_audio).is_file()
     assert ref.exists()
 
 
