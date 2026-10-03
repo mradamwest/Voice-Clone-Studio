@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt, QThread, Signal, QUrl, QStandardPaths
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from pathlib import Path
 
-from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, reference_audio_status, generation_output_path, verify_generated_audio
+from voice_clone_studio.core.engine import VoiceEngine, generation_preflight, reference_audio_status, generation_output_path, verify_generated_audio, expressive_settings
 from voice_clone_studio.core.voice_library import VoiceLibrary
 from voice_clone_studio.core.generated_library import GeneratedVoiceLibrary
 
@@ -16,20 +16,23 @@ class GenerateWorker(QThread):
     failed = Signal(str)
     status = Signal(str)
 
-    def __init__(self, text, reference_audio, output, language_id="en", allow_model_download=False):
+    def __init__(self, text, reference_audio, output, language_id="en", allow_model_download=False, emotion="Neutral", intensity="Medium"):
         super().__init__()
         self.text = text
         self.reference_audio = reference_audio
         self.output = output
         self.language_id = language_id
         self.allow_model_download = allow_model_download
+        self.emotion = emotion
+        self.intensity = intensity
 
     def run(self):
         try:
             self.status.emit("Preparing voice model…")
             generation_preflight(self.text, self.reference_audio, self.output, allow_model_download=self.allow_model_download)
             self.status.emit("Generating speech…")
-            path = VoiceEngine().generate(self.text, self.reference_audio, self.output, language_id=self.language_id)
+            settings = expressive_settings(self.emotion, self.intensity)
+            path = VoiceEngine().generate(self.text, self.reference_audio, self.output, language_id=self.language_id, **settings)
             self.finished_audio.emit(str(path))
         except Exception as exc:
             self.failed.emit(str(exc))
@@ -130,6 +133,18 @@ class MainWindow(QMainWindow):
         self.language_combo.addItems(["English (en)", "Arabic (ar)", "Danish (da)", "German (de)", "Greek (el)", "Spanish (es)", "Finnish (fi)", "French (fr)", "Hebrew (he)", "Hindi (hi)", "Italian (it)", "Japanese (ja)", "Korean (ko)", "Malay (ms)", "Dutch (nl)", "Norwegian (no)", "Polish (pl)", "Portuguese (pt)", "Russian (ru)", "Swedish (sv)", "Swahili (sw)", "Turkish (tr)", "Chinese (zh)"])
         language_row.addWidget(self.language_combo, 1)
         c.addLayout(language_row)
+
+        expressive_row = QHBoxLayout()
+        expressive_row.addWidget(QLabel("Emotion"))
+        self.emotion_combo = QComboBox()
+        self.emotion_combo.addItems(["Neutral", "Angry", "Sad", "Happy", "Excited", "Fearful", "Serious", "Whisper"])
+        expressive_row.addWidget(self.emotion_combo, 1)
+        expressive_row.addWidget(QLabel("Intensity"))
+        self.intensity_combo = QComboBox()
+        self.intensity_combo.addItems(["Low", "Medium", "High"])
+        self.intensity_combo.setCurrentText("Medium")
+        expressive_row.addWidget(self.intensity_combo, 1)
+        c.addLayout(expressive_row)
 
         controls = QHBoxLayout()
         controls.addWidget(QLabel("Stability"))
@@ -492,7 +507,7 @@ class MainWindow(QMainWindow):
         self.generation_status.setText("Preparing voice model…")
         self.generation_status.setVisible(True)
         language_id = self.language_combo.currentText().rsplit("(", 1)[-1].rstrip(")")
-        self.worker = GenerateWorker(text, self.reference_audio, output, language_id=language_id, allow_model_download=allow_model_download)
+        self.worker = GenerateWorker(text, self.reference_audio, output, language_id=language_id, allow_model_download=allow_model_download, emotion=self.emotion_combo.currentText(), intensity=self.intensity_combo.currentText())
         self.worker.finished_audio.connect(self._generation_finished)
         self.worker.finished.connect(self._generation_worker_finished)
         self.worker.status.connect(self.generate_button.setText)

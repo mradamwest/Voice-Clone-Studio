@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 
-from voice_clone_studio.core.engine import VoiceEngine, engine_status, ensure_voice_ready, first_run_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, generation_preflight, verify_generated_audio
+from voice_clone_studio.core.engine import VoiceEngine, engine_status, ensure_voice_ready, first_run_status, validate_generation_request, model_cache_status, reference_audio_status, generation_output_path, generation_preflight, verify_generated_audio, expressive_settings
 
 def test_explicit_device_is_respected():
     assert VoiceEngine("cpu")._best_device() == "cpu"
@@ -277,3 +277,32 @@ def test_generate_leaves_normal_audio_level_unchanged(monkeypatch, tmp_path):
     monkeypatch.setattr("torchaudio.save", fake_save)
     engine.generate("hello", str(ref), str(out))
     assert captured["peak"] == pytest.approx(0.4, abs=1e-5)
+
+
+def test_expressive_settings_maps_angry_high():
+    settings = expressive_settings("Angry", "High")
+    assert settings["exaggeration"] == pytest.approx(0.9775)
+    assert settings["cfg_weight"] == pytest.approx(0.30)
+
+
+def test_expressive_settings_rejects_unknown_emotion():
+    with pytest.raises(ValueError, match="Unsupported emotion"):
+        expressive_settings("Confused", "Medium")
+
+
+def test_generate_passes_expressive_controls(monkeypatch, tmp_path):
+    import torch
+    ref = tmp_path / "voice.wav"; ref.write_bytes(b"audio")
+    out = tmp_path / "expressive.wav"
+    calls = []
+    class FakeModel:
+        sr = 24000
+        def get_supported_languages(self): return {"en": "English"}
+        def generate(self, text, **kwargs):
+            calls.append(kwargs)
+            return torch.tensor([[0.0, 0.2]], dtype=torch.float32)
+    engine = VoiceEngine("cpu"); engine._model = FakeModel()
+    monkeypatch.setattr("torchaudio.save", lambda path, wav, sr: Path(path).write_bytes(b"RIFFexpressive"))
+    engine.generate("hello", str(ref), str(out), exaggeration=0.85, cfg_weight=0.30)
+    assert calls[0]["exaggeration"] == pytest.approx(0.85)
+    assert calls[0]["cfg_weight"] == pytest.approx(0.30)
