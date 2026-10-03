@@ -48,7 +48,7 @@ class VoiceEngine:
                 )
         return self._model
 
-    def generate(self, text: str, reference_audio: str, output: str, language_id: str = "en") -> Path:
+    def generate(self, text: str, reference_audio: str, output: str, language_id: str = "en", exaggeration: float | None = None, cfg_weight: float | None = None) -> Path:
         """Generate cloned speech without loading the model until validation passes."""
         clean_text, reference, out = validate_generation_request(text, reference_audio, output)
         if not clean_text:
@@ -58,7 +58,12 @@ class VoiceEngine:
         supported = getattr(model, "get_supported_languages", lambda: {})()
         if supported and language_id not in supported:
             raise ValueError(f"Unsupported language: {language_id}")
-        wav = model.generate(clean_text, language_id=language_id, audio_prompt_path=str(reference))
+        generation_kwargs = {"language_id": language_id, "audio_prompt_path": str(reference)}
+        if exaggeration is not None:
+            generation_kwargs["exaggeration"] = float(exaggeration)
+        if cfg_weight is not None:
+            generation_kwargs["cfg_weight"] = float(cfg_weight)
+        wav = model.generate(clean_text, **generation_kwargs)
         if wav is None or not hasattr(wav, "numel") or wav.numel() == 0:
             raise RuntimeError("Voice engine returned no audio.")
         import torchaudio
@@ -198,3 +203,28 @@ def generation_preflight(text: str, reference_audio: str, output: str, allow_mod
         "output": str(destination),
         **readiness,
     }
+
+
+EXPRESSIVE_PRESETS = {
+    "Neutral": {"exaggeration": 0.50, "cfg_weight": 0.50},
+    "Angry": {"exaggeration": 0.85, "cfg_weight": 0.30},
+    "Sad": {"exaggeration": 0.65, "cfg_weight": 0.45},
+    "Happy": {"exaggeration": 0.75, "cfg_weight": 0.40},
+    "Excited": {"exaggeration": 0.90, "cfg_weight": 0.30},
+    "Fearful": {"exaggeration": 0.80, "cfg_weight": 0.35},
+    "Serious": {"exaggeration": 0.55, "cfg_weight": 0.55},
+    "Whisper": {"exaggeration": 0.35, "cfg_weight": 0.45},
+}
+
+
+def expressive_settings(emotion: str = "Neutral", intensity: str = "Medium") -> dict[str, float]:
+    """Map friendly UI emotion/intensity choices to Chatterbox controls."""
+    if emotion not in EXPRESSIVE_PRESETS:
+        raise ValueError(f"Unsupported emotion: {emotion}")
+    intensity_scale = {"Low": 0.80, "Medium": 1.0, "High": 1.15}
+    if intensity not in intensity_scale:
+        raise ValueError(f"Unsupported intensity: {intensity}")
+    settings = dict(EXPRESSIVE_PRESETS[emotion])
+    if emotion != "Neutral":
+        settings["exaggeration"] = min(1.0, settings["exaggeration"] * intensity_scale[intensity])
+    return settings
